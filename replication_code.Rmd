@@ -1,0 +1,1207 @@
+---
+title: "Social Vulnerability in Japan"
+authors: "Timothy Fraser and Nikki Naquin"
+date: "June 24, 2021"
+output: html_notebook
+---
+
+
+
+# 0. Packages
+
+```{r}
+# Let's install the following five starter packages
+#install.packages(c("tidyverse", "Zelig", "texreg", "ggpubr", "viridis"))
+# (Already done!)
+
+# Let's load these packages (must do every time we turn on R)
+library(tidyverse)
+library(Zelig)
+library(texreg)
+library(ggpubr)
+library(viridis)
+library(lmtest)
+```
+
+# 1. Main Dataset
+
+This dataset ("raw_data/indices_V2_2020_10_28.csv") contains the main indices in this study, as well as the many indicators that went into making them. For more info on that, please check out my 2021 paper in the International Journal of Disaster Risk Reduction.
+
+```{r}
+# Load in dataset
+dat <- read_csv("raw_data/dataset.csv")
+
+
+```
+
+It can be a lot to load it all in at once, since storing rows is easier than storing many columns. If we want an easier method, how about this?
+
+```{r}
+dat_limited <- read_csv("raw_data/indices_V2_2020_10_28.csv") %>%
+  mutate(pref_code = str_sub(muni_code, 1,2)) %>%
+  mutate(pref = if_else(pref_code == "04", "Miyagi", pref)) %>%
+  select(muni_code, pref, muni, 
+         social_capital, bonding, bridging, linking, vulnerability, year, pref_code)
+```
+
+```{r}
+dat <- read_csv("raw_data/dataset.csv") %>%
+  mutate(pref_code = str_sub(muni_code, 1,2)) %>%
+  mutate(pref = if_else(pref_code == "04", "Miyagi", pref))
+```
+
+How do we take a quick look at our data?
+
+```{r}
+dat %>%
+  head()
+
+```
+
+What's that funny %>% thing I keep using? That's a pipeline! It connects data to functions, which result in outputs, using a little "pipe"! You can then keep on piping the new output into a new function, leading to long-but-efficient chunks of code. 
+
+```{r}
+dat %>%
+  # Filter to just cities in Hokkaido Prefecture
+  filter(pref == "Hokkaido") %>%
+  # And calculate the mean bonding social capital index score, 
+  # with a column to manually indicate what type of social capital it is.
+  summarize(
+    type = "bonding",
+    mean = mean(bonding, na.rm = TRUE))
+```
+
+How do we reshape our data? The easiest way is the pivot_longer function.
+
+```{r}
+dat %>%
+  pivot_longer(
+    cols = c(social_capital, bonding, bridging, linking, vulnerability),
+    names_to = "variable",
+    values_to = "value") %>%
+  head()
+```
+
+Oooh, can we use this to make cooler visuals?
+
+```{r}
+dat %>%
+  pivot_longer(
+    cols = c(social_capital, bonding, bridging, linking),
+    names_to = "variable",
+    values_to = "value") %>%
+  ggplot(mapping = aes(x = value, y = vulnerability, color = variable)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "black") +
+  facet_wrap(~variable, scales = "free_x")
+```
+
+
+Huh, I feel like something is going on there, but those boxes were stretched wide, so it's hard to tell the slope. Can I fix up this image?
+
+```{r}
+dat %>%
+  # Reshape data
+  pivot_longer(
+    cols = c(social_capital, bonding, bridging, linking),
+    names_to = "variable",
+    values_to = "value") %>%
+  # Plot aesthetics
+  ggplot(mapping = aes(x = value, y = vulnerability, color = variable)) +
+  # add scatterplot with transparency
+  geom_point(alpha = 0.5) +
+  # add black best fit lines
+  geom_smooth(method = "lm", color = "black") +
+  # split into four panels, where x-axes fit the range of the data
+  facet_wrap(~variable, scales = "free_x", ncol = 4) +
+  # Oooh, we got rid of the legend
+  guides(color = "none") +
+  # ooh, we saved the image with a specific aspect ratio (500) and width and height!
+  ggsave("viz/fig1_scatterplot.png", dpi = 500, width = 8, height = 5)
+
+```
+
+
+
+# 2. Descriptive Analysis
+
+Before doing the analysis, I realize that another version of the dataset needs to be created that includes the "year" variable.
+
+```{r}
+dat_analysis <- dat %>%
+  select(muni_code, pref, muni, year,
+         social_capital, bonding, bridging, linking, vulnerability)
+```
+
+
+1. Let's figure out how closely related cities' level of social vulnerability is to each type of social capital?
+
+```{r}
+dat %>%
+  summarise(
+    type= "bonding",
+    correlation=cor(bonding, vulnerability))
+#How can I have this apply to every row in the data set?
+  
+#Correlation matrix including each type of social capital and vulnerability
+dat %>%
+  select(bonding, bridging, linking, vulnerability) %>%
+  cor()
+  
+```
+
+Ideally, I'd like a table like the ones below, but for each city. I'm not sure what my code is missing.
+
+2. Then, can you find that out for every year? (using group_by(), summarize(), & cor() ).
+
+```{r}
+dat_year %>%
+  group_by(year) %>%
+  summarise(
+    type= "bonding",
+    correlation=cor(bonding, vulnerability))
+
+dat_year %>%
+  group_by(year) %>%
+  summarise(
+    type= "bridging",
+    correlation=cor(bridging, vulnerability))
+
+dat_year %>%
+  group_by(year) %>%
+  summarise(
+    type= "linking",
+    correlation=cor(linking, vulnerability))
+
+```
+
+What I noticed from this:
+There is a an increasing + correlation between bonding capital and vulnerability from 2000-2007, but a sudden switch to a - correlation occurred and continued from 2008 onward. 
+
+There is a consistent slight + correlation between bridging capital and vulnerability from 2000-2005, which turned into a consistent - correlation from 2011-2017.
+There is a consistent - correlation between linking capital and vulnerability from 2000-2017, with the correlation strengthening between 2000-2007. 
+2007-2008 seems to be a turning point in the data, so I'm curious about things that may have happened in Japan at that time which may explain that shift. 
+
+My next step is to run regression models for a better understanding of the data.
+
+3. Then, can you find that out for every prefecture?
+
+```{r}
+dat %>%
+  group_by(pref, pref_code) %>% 
+  summarize(
+    type= "bonding",
+    correlation=cor(bonding, vulnerability)) %>%
+  arrange(desc(correlation))
+
+dat %>%
+  group_by(pref, pref_code) %>% 
+  summarize(
+    type= "bridging",
+    correlation=cor(bridging, vulnerability)) %>%
+  arrange(desc(correlation))
+
+dat %>%
+  group_by(pref, pref_code) %>% 
+  summarize(
+    type= "linking",
+    correlation=cor(linking, vulnerability)) %>%
+  arrange(desc(correlation))
+  
+```
+What I noticed from this:
+
+-Bonding
+Nagasaki, Nara and Hiroshima have a strong positive correlation b/w bonding bonding and vulnerability. They are all in the south and have population densities b/w 320 & 570 people/sq klm.
+Tokyo, Fukuoka and Akita have strong negative correlation b/w bonding bonding and vulnerability.
+
+-Bridging
+All but 6 prefectures have negative correlations between bridging and vulnerability.
+Ibaraki has an especially strong positive correlation between bridging and vulnerability, with Tokushima and Saitama following. Ibaraki and Saitama are neighbors.
+Miyazaki, Nagasaki and Oita have the strongest negative correlations between bridging and vulnerability. They are all located in Kyushu and all have moderate population density.
+
+-Linking
+All but 17 prefectures have negative correlations between linking and vulnerability.
+Yamaguchi, Kyoto and Akita have a strong positive correlation b/w linking and vulnerability.
+Yamagata, Tokyo and Fukushima have a strong negative correlation b/w linking and vulnerability.
+
+-Notable prefectures
+Nagasaki has strong + correlation with bonding, - correlation with bridging.
+Akita has strong - correlation with bonding, + correlation with bridging.
+Tokyo has strong - correlation with bonding, - correlation with bridging.
+
+4. Then, can we think of any interesting ways to show that information visually? Draw some ideas on paper, look it up in R Graph Gallery, try it out in ggplot, and we'll go from there.
+
+## Correlation Visual
+
+```{r}
+#correlation scatter plots with vulnerability as the x axis, the type of social capital as the y, and the score of each prefecture as a dot. 
+
+#example code and graph
+g1 <- dat %>% 
+  pivot_longer(cols = c(bonding, bridging, linking), 
+               names_to = "variable", values_to = "value") %>% 
+  group_by(pref, year, variable) %>% 
+  summarize(cor = cor(value, vulnerability)) %>%
+  mutate(variable = variable %>% dplyr::recode_factor(
+    "bonding" = "Bonding\nSocial Capital",
+    "bridging" = "Bridging\nSocial Capital",
+    "linking" = "Linking\nSocial Capital")) %>%
+  ggplot(mapping = aes(x= year, y=cor, fill = cor)) +
+  geom_point(shape = 21, color = "#555555", size = 3) +
+  geom_smooth(method = "lm", color = "black") +
+  facet_wrap(~variable) +
+  scale_fill_gradient2(low = "#DC267F", high = "#648FFF", mid = "white", midpoint = 0) +
+  labs(fill = "Correlation\nCoefficient\n(Pearson's r)", 
+       subtitle = "Vulnerability and Social Capital correlated by Prefecture and Year", 
+       caption = "Each point represents correlation between vulnerability and specified type of social capital\nfor municipalities within one of 47 prefectures in a given year. Line of best fit depicts time trend.", 
+       x = "Year (2000-2017)", 
+       y = "Strength of Association (Correlation, -1 to 1)\nbetween Vulnerability and Social Capital") +
+  theme_bw(base_size = 14) +
+  theme(panel.spacing = unit(0.2, "cm"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black"),
+        plot.caption = element_text(hjust = 0),
+        plot.subtitle = element_text(hjust = 0.5),
+        strip.background = element_blank()) +
+  # Add a yintercept
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black")  +
+  guides(fill = guide_colorsteps(frame.colour = "black", barheight = 10, barwidth = 0.5)) 
+  ggsave(plot = g1, filename = "viz/fig2_correlation.png", dpi = 500, height = 6, width = 8)
+
+```
+## Supplemental Visuals
+
+```{r}
+
+
+dat %>% 
+  pivot_longer(cols = c(vulnerability, bonding, bridging, linking), 
+               names_to = "variable", values_to = "value") %>% 
+  group_by(pref, pref_code, variable) %>% 
+  summarize(mean = mean(value)) %>%
+  mutate(variable = variable %>% dplyr::recode_factor(
+    "vulnerability" = "Social\nVulnerability",
+    "bonding" = "Bonding\nSocial Capital",
+    "bridging" = "Bridging\nSocial Capital",
+    "linking" = "Linking\nSocial Capital")) %>%
+  mutate(pref = pref %>% str_remove("[-]ken|[-]to|[-]fu")) %>%
+  ungroup() %>%
+  ggplot(mapping = aes(x = reorder(pref, -as.numeric(pref_code)), y = mean, ymin = 0, ymax = mean)) +
+  geom_linerange() +
+  geom_point() +
+  facet_grid(~variable, scales = "free") +
+  coord_flip()
+
+
+
+
+stats <- dat %>% 
+    # Adjust prefecture variable to remove the ending "-ken"
+  mutate(pref = pref %>% str_remove(pattern = "-ken|-to|-fu")) %>%
+  # Now code region by sorting prefectures into regions
+  mutate(region = case_when(
+    pref %in% c("Hokkaido") ~ "Hokkaido",
+    pref %in% c("Akita", "Aomori", "Fukushima", "Iwate", "Miyagi", "Yamagata") ~ "Tohoku",
+    pref %in% c("Chiba", "Gunma", "Gumma", "Ibaraki", "Kanagawa", "Saitama", "Tochigi", "Tokyo") ~ "Kanto",
+    pref %in% c("Fukui", "Niigata", "Toyama", "Ishikawa") ~ "Hokuriku",
+    pref %in% c("Aichi",  "Gifu", "Nagano", "Shizuoka", "Yamanashi") ~ "Chubu",
+    pref %in% c("Hyogo", "Kyoto", "Mie", "Nara", "Osaka", "Shiga", "Wakayama") ~ "Kansai",
+    pref %in% c("Hiroshima", "Okayama", "Shimane", "Tottori", "Yamaguchi") ~ "Chugoku",
+    pref %in% c("Ehime", "Kagawa", "Kochi", "Tokushima") ~ "Shikoku",
+    pref %in% c("Fukuoka","Saga", "Kagoshima", "Kumamoto", "Miyazaki", "Nagasaki", "Oita", "Okinawa") ~ "Kyushu")) %>%
+  pivot_longer(cols = c(vulnerability, bonding, bridging, linking), 
+               names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  mutate(value = scale(value)) %>%
+  group_by(region, year, variable) %>% 
+  summarize(mean = mean(value),
+            myorder = mean(as.numeric(pref_code)),
+            count = n()) %>%
+  filter(year %in% c(2000, 2017)) %>%
+  mutate(variable = variable %>% dplyr::recode_factor(
+    "vulnerability" = "Social\nVulnerability",
+    "bonding" = "Bonding\nSocial Capital",
+    "bridging" = "Bridging\nSocial Capital",
+    "linking" = "Linking\nSocial Capital"))  %>%
+  mutate(region = paste(region, " (n = ", count, ")", sep = ""))
+
+
+stats_long <- stats %>%
+  pivot_wider(id_cols = c(region, variable,myorder, count), 
+              names_from = year, values_from = mean, 
+              names_prefix = "year_") %>% 
+  mutate(diff = round(year_2017 - year_2000, 1),
+         midpoint = (year_2000 + year_2017) / 2) %>%
+  ungroup() %>%
+  mutate(color = case_when(
+    diff == 0 ~ "neutral",
+    diff >= 0 ~ "positive",
+    diff <= 0 ~ "negative"))
+
+g2 <-stats_long %>%
+  ggplot(mapping = aes(x = reorder(region, -myorder), 
+                       y = midpoint,
+                       ymin = year_2000, ymax = year_2017,
+                       label = diff,
+                       color = color)) +
+  # Add lines indicating size of change
+  geom_linerange(size = 1.25) +
+  # Add text indicating change
+  geom_text(data = stats_long,
+            mapping = aes(reorder(region, -myorder), 
+                       y = midpoint,
+                       ymin = year_2000, ymax = year_2017,
+                       label = diff,
+                       color = color),
+            nudge_x = 0.35, size = 3.5) +
+  # Color the changes
+  scale_color_manual(values = c("#DC267F","black", "#648FFF")) +
+  
+  geom_point(data = stats,
+               mapping = aes(x = reorder(region, -myorder),
+                             y = mean, fill = factor(year),
+                             ymin = NA_real_, ymax = NA_real_, label = NA_real_),
+             color = "#555555", size = 3, shape = 21) +
+  facet_grid(~variable) +
+  coord_flip() +
+  labs(y = "Average Value in 2000 compared to 2017 (represented as Z-scores)",
+       x = "Regions of Japan",
+       fill = "Year")  +
+  scale_fill_manual(values = c("white", "black"))  +
+  theme_bw(base_size = 14) +
+  theme(panel.spacing = unit(0.2, "cm"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black"),
+        plot.caption = element_text(hjust = 0),
+        plot.subtitle = element_text(hjust = 0.5),
+        strip.background = element_blank(),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = c(-1, -0.5, 0, 0.5, 1, 1.5),
+                     labels = c("-1", "-.5", "0", ".5", "1", "1.5")) +
+  guides(color = "none")
+
+
+ggsave(plot = g2, filename = "viz/fig3_change.png", dpi = 500, height = 5, width = 10)
+
+```
+
+
+
+
+
+
+```{r}
+#pivoted correlation data
+
+dat %>% 
+  pivot_longer(cols = c(bonding, bridging, linking), names_to = "variable", values_to = "value") %>% group_by(pref, year, variable) %>% summarize(cor = cor(value, vulnerability))
+```
+
+
+
+```{r}
+#my actual work
+dat %>%
+  ggplot(aes(x = vulnerability, y = bonding)) +
+  geom_point(alpha= 0.25) +
+  labs(x = "vulnerability", y = "bonding", title = "Bonding Capital and Vulnerability") +
+  geom_smooth(method = "lm", se = FALSE)
+
+dat %>%
+  ggplot(aes(x = vulnerability, y = bridging)) +
+  geom_point(alpha= 0.25) +
+  labs(x = "vulnerability", y = "bridging", title = "Bridging Capital and Vulnerability") +
+  geom_smooth(method = "lm", se = FALSE)
+
+dat %>%
+  ggplot(aes(x = vulnerability, y = linking)) +
+  geom_point(alpha= 0.25) +
+  labs(x = "vulnerability", y = "linking", title = "Linking Capital and Vulnerability") +
+  geom_smooth(method = "lm", se = FALSE)
+
+dat %>% 
+  pivot_longer(cols = c(bonding, bridging, linking), names_to = "variable", values_to = "value") %>% group_by(pref, year, variable) %>% summarize(cor = cor(value, vulnerability)) %>%
+  ggplot(aes(x=year, y= cor, color=variable)) +
+  geom_point(alpha= 0.25) +
+  labs( x= "Year", y= "Correlation", title = "Correlation Values of Different Measures of Social Capital (by year)") +
+  geom_smooth(method= "lm", se = FALSE)
+#I'm honestly not sure how helpful this is ^
+
+
+
+```
+
+# 3. Linear Regression Model
+
+```{r}
+dat %>% 
+  lm(formula = vulnerability ~ bonding + bridging + linking + factor(year)) %>% 
+  summary()
+
+m1 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking)
+m2 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + factor(year))
+
+lmtest::lrtest(m1,m2)
+
+```
+
+
+
+# 5. Fixed Effects Models (Validation)
+
+## 5.1 First try (with social assistance)
+
+```{r}
+library(tidyverse)
+library(Zelig)
+library(texreg)
+
+# Load in data
+dat <- read_csv("raw_data/dataset.csv") %>%
+  # Select these key variables
+  select(vulnerability, bonding, bridging, linking,
+         exp_dis_relief_per_capita, exp_public_works_per_capita, 
+         exp_social_assistance_per_capita, exp_fire_per_capita, pop, 
+         year, unemployment, financial_strength_index, death_rate, damage_rate, fukushima, 
+         total_migration, pref) %>%
+  # Adjust prefecture variable to remove the ending "-ken"
+  mutate(pref = pref %>% str_remove(pattern = "-ken|-to|-fu")) %>%
+  # Now code region by sorting prefectures into regions
+  mutate(region = case_when(
+    pref %in% c("Hokkaido") ~ "Hokkaido",
+    pref %in% c("Akita", "Aomori", "Fukushima", "Iwate", "Miyagi", "Yamagata") ~ "Tohoku",
+    pref %in% c("Chiba", "Gunma", "Gumma", "Ibaraki", "Kanagawa", "Saitama", "Tochigi", "Tokyo") ~ "Kanto",
+    pref %in% c("Fukui", "Niigata", "Toyama", "Ishikawa") ~ "Hokuriku",
+    pref %in% c("Aichi",  "Gifu", "Nagano", "Shizuoka", "Yamanashi") ~ "Chubu",
+    pref %in% c("Hyogo", "Kyoto", "Mie", "Nara", "Osaka", "Shiga", "Wakayama") ~ "Kansai",
+    pref %in% c("Hiroshima", "Okayama", "Shimane", "Tottori", "Yamaguchi") ~ "Chugoku",
+    pref %in% c("Ehime", "Kagawa", "Kochi", "Tokushima") ~ "Shikoku",
+    pref %in% c("Fukuoka","Saga", "Kagoshima", "Kumamoto", "Miyazaki", "Nagasaki", "Oita", "Okinawa") ~ "Kyushu")) %>%
+  # Make year a factor, so Zelig will pick it up
+  mutate(year = factor(year),
+         region = factor(region),
+         pref = factor(pref)) %>%
+  # adjust variables to avoid colinearity
+  mutate(disaster = (scale(death_rate) + scale(damage_rate)) / 2) %>%
+  mutate(exp_fire_per_capita = ntile(exp_fire_per_capita, 10)) %>%
+  mutate(exp_public_works_per_capita = ntile(exp_public_works_per_capita, 10)) %>%
+  mutate(bridging = ntile(bridging, 10)) %>%
+  mutate(exp_social_assistance_per_capita = ntile(exp_social_assistance_per_capita, 10)) %>%
+  # Exclude cities in the Fukushima exclusion zone, because they're basically incomparable
+  filter(fukushima != 1) %>%
+  # Impute using prefectural mean
+  group_by(pref, year) %>%
+  mutate_at(vars(exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+            funs(if_else(condition = is.na(.), true = mean(., na.rm = TRUE), false = as.numeric(.)))) %>%
+  ungroup() %>%
+  # Rescale all continuous variables into Z-scores
+  # (Zscore = mean centered at zero, counts number of standard deviations away from mean), 
+  # so their effect sizes are comparable
+  mutate_at(vars(vulnerability, bonding, bridging, linking,
+              exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+       funs(scales::rescale(., to = c(1,100))))
+
+# The following code confirms that all variables are missing less than 5% of data points; the highest missing is financial_streng_index, at 1.32%. Therefore, it is fine to impute using the prefectural mean.
+
+#dat %>%
+#  summarize_at(vars(vulnerability, bonding, bridging, linking,
+#              exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+#              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+#              financial_strength_index,  pop,  disaster,  total_migration),
+#              funs(sum(is.na(.)) / n() * 100 %>% round(2))) %>%
+#  t()
+
+# Basic model, with simple control for population and year
+x1 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + pop +
+       year)
+
+# Model with controls and year fixed effect (+ expenditure/capita measures, financial strength index)
+x2 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + 
+       exp_social_assistance_per_capita + exp_fire_per_capita + pop + 
+       financial_strength_index + # exclude unemployment - that's already in the vulnerability variable
+       year)
+
+# Model with extended controls and year fixed effect (+disaster, total migration)
+x3 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + 
+       exp_social_assistance_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year)
+
+# Model with extended controls and year + region fixed effect (+region)
+x4 <-dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + 
+       exp_social_assistance_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year + region)
+
+
+
+car::vif(x1)^2
+car::vif(x2)^2
+car::vif(x3)^2
+car::vif(x4)^2
+
+# Likelihood ratio test - shows x4 has the highest log-likelihood
+lmtest::lrtest(x1,x2,x3,x4)
+
+
+# Let's make a model table
+texreg::screenreg(
+  list(x1,x2,x3, x4), 
+  omit.coef = "year|region",
+  custom.model.names = c("Basic Model",
+                         "With Controls",
+                         "Extended Controls",
+                         "Regional Controls"), stars = c(0.001, 0.01, 0.05, 0.10),
+  include.fstat = TRUE)
+
+```
+
+
+
+
+
+
+## 5.2 Main Models (sans social assistance)
+
+We exclude social assistance spending here because it is included in the social vulnerability measure. The results do not change!
+
+```{r}
+library(tidyverse)
+library(Zelig)
+library(texreg)
+
+# Load in data
+dat <- read_csv("raw_data/dataset.csv") %>%
+  # Select these key variables
+  select(vulnerability, bonding, bridging, linking,
+         exp_dis_relief_per_capita, exp_public_works_per_capita, 
+         exp_social_assistance_per_capita, exp_fire_per_capita, pop, 
+         year, unemployment, financial_strength_index, death_rate, damage_rate, fukushima, 
+         total_migration, pref) %>%
+  # Adjust prefecture variable to remove the ending "-ken"
+  mutate(pref = pref %>% str_remove(pattern = "-ken|-to|-fu")) %>%
+  # Now code region by sorting prefectures into regions
+  mutate(region = case_when(
+    pref %in% c("Hokkaido") ~ "Hokkaido",
+    pref %in% c("Akita", "Aomori", "Fukushima", "Iwate", "Miyagi", "Yamagata") ~ "Tohoku",
+    pref %in% c("Chiba", "Gunma", "Gumma", "Ibaraki", "Kanagawa", "Saitama", "Tochigi", "Tokyo") ~ "Kanto",
+    pref %in% c("Fukui", "Niigata", "Toyama", "Ishikawa") ~ "Hokuriku",
+    pref %in% c("Aichi",  "Gifu", "Nagano", "Shizuoka", "Yamanashi") ~ "Chubu",
+    pref %in% c("Hyogo", "Kyoto", "Mie", "Nara", "Osaka", "Shiga", "Wakayama") ~ "Kansai",
+    pref %in% c("Hiroshima", "Okayama", "Shimane", "Tottori", "Yamaguchi") ~ "Chugoku",
+    pref %in% c("Ehime", "Kagawa", "Kochi", "Tokushima") ~ "Shikoku",
+    pref %in% c("Fukuoka","Saga", "Kagoshima", "Kumamoto", "Miyazaki", "Nagasaki", "Oita", "Okinawa") ~ "Kyushu")) %>%
+  # Make year a factor, so Zelig will pick it up
+  mutate(year = factor(year),
+         region = factor(region),
+         pref = factor(pref)) %>%
+  # adjust variables to avoid colinearity
+  mutate(disaster = (scale(death_rate) + scale(damage_rate)) / 2) %>%
+  mutate(exp_fire_per_capita = ntile(exp_fire_per_capita, 10)) %>%
+  mutate(exp_public_works_per_capita = ntile(exp_public_works_per_capita, 10)) %>%
+  mutate(bridging = ntile(bridging, 10)) %>%
+  mutate(exp_social_assistance_per_capita = ntile(exp_social_assistance_per_capita, 10)) %>%
+  # Exclude cities in the Fukushima exclusion zone, because they're basically incomparable
+  filter(fukushima != 1) %>%
+  # Impute using prefectural mean
+  group_by(pref, year) %>%
+  mutate_at(vars(exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+            funs(if_else(condition = is.na(.), true = mean(., na.rm = TRUE), false = as.numeric(.)))) %>%
+  ungroup() %>%
+  # Rescale all continuous variables into Z-scores
+  # (Zscore = mean centered at zero, counts number of standard deviations away from mean), 
+  # so their effect sizes are comparable
+  mutate_at(vars(vulnerability, bonding, bridging, linking,
+              exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+       funs(scales::rescale(., to = c(1,10))))
+
+
+x1 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + pop +
+       year)
+
+# Model with controls and year fixed effect (+ expenditure/capita measures, financial strength index)
+x2 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + pop + 
+       financial_strength_index + # exclude unemployment - that's already in the vulnerability variable
+       year)
+
+# Model with extended controls and year fixed effect (+disaster, total migration)
+x3 <- dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year)
+
+# Model with extended controls and year + region fixed effect (+region)
+x4 <-dat %>%
+  lm(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year + region)
+
+mymodels <- list(x1,x2,x3,x4)
+
+mymodels %>%
+  saveRDS("fe_models.rds")
+
+texreg::htmlreg(
+  l = read_rds("fe_models.rds"), 
+  digits = 3,
+  omit.coef = "year|region",
+  custom.model.names = c("Model 5<br>Basic Model",
+                         "Model 6<br>With Controls",
+                         "Model 7<br>Extended Controls",
+                         "Model 8<br>Regional Controls"), stars = c(0.001, 0.01, 0.05, 0.10),
+  include.fstat = TRUE,
+  custom.gof.rows = list(
+    "Mean VIF" = list(x1,x2,x3,x4) %>%
+      map(~car::vif(.)[,3]^2 %>% mean()) %>%
+      unlist(),
+    "LR Test (p-value)" = lmtest::lrtest(x1,x2,x3,x4) %>%
+      as.data.frame() %>%
+      mutate(value = paste(round(LogLik,1), gtools::stars.pval(`Pr(>Chisq)`), sep = "")) %>%
+      select(value) %>%
+      unlist()
+    ),
+  custom.coef.map = list(
+    "bonding" = "Bonding Social Capital",
+    "bridging" = "Bridging Social Capital",
+    "linking" = "Linking Social Capital",
+    "pop" = "Population",
+    "financial_strength_index" = "Financial Strength Index",
+    "exp_dis_relief_per_capita" = "Disaster Relief Spending Rate",
+    "exp_fire_per_capita" = "Emergency Services Spending Rate",
+    "exp_public_works_per_capita" = "Public Works Spending Rate",
+    "disaster" = "Disaster Conditions",
+    "total_migration" = "Total Migration Rate",
+    "(Intercept)" = "Constant"),  
+  single.row = TRUE, bold = 0.10, 
+  custom.header = list("Social Vulnerability<br><i>Beta Coefficient (Standard Error)</i>" = 1:4),
+  caption.above = TRUE,
+  caption = "<b>OLS Fixed Effects Models of Social Vulnerability in 1730 Japanese Municipalities over 18 years</b><br><i>from 2000-2017 (n = 31,243) with annual fixed effects</i>",
+  custom.note = "<b>Statistical Significance</b>: *** p < 0.001, ** p < 0.01, * p < 0.05, . p < 0.10.<br><br><b>LR Test</b>: Likelihood Ratio tests indicate how much each model improved the log-likelihood compared to the previous model. A statistically significant increase in the log-likelihood reported indicates a better model. All tests indicate our final model fits best.<br><br><b>Note</b>: Beta coefficients indicate the projected increase in a city's social vulnerability index (1-10) given a 1-unit increase in the predictor on a scale from 1 (minimum) to 10 (maximum). All predictors were rescaled from 1 (minimum) to 10 (maximum) to allow comparison of effect sizes.",
+  groups = list(
+    "<b>Independent Variables</b>" = 1:3,
+    "<b>Control Variables</b>" = 4:10),
+  file = "viz/table_1.html")
+
+
+list(x1,x2,x3,x4) %>%
+      map(~car::vif(.)[,3]^2 %>% max()) %>%
+      unlist()
+```
+
+## 5.3 Zelig Visual
+
+```{r}
+# Now lets remake that last one for use in Zelig
+z4 <- dat %>%
+  zelig(formula = vulnerability ~ bonding + bridging + linking + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + 
+       exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year + region, model = "ls")
+
+
+# Basic Zelig code
+mysim <- z4 %>%
+  # Set the range for bonding social capital from 1 (min) to 10 (max)
+  setx(bonding = seq(from = 1, to = 10, length.out = 30),
+       bridging = 1,
+       linking = 1,
+       # set the year to be 2017,
+       # and the region to be Chubu - a pretty ordinary region
+       year = "2017", region =  "Chubu") %>%
+  # Simulated vulnerability based on these conditions
+  sim()  %>%
+  # convert results to dataframe
+  zelig_qi_to_df() %>%
+  # Get expected values for vulnerability
+  # with 95% confidence intervals
+  qi_slimmer(qi_type = "ev", ci = 0.95)
+
+
+# Make a Zelig prediction plot
+mysim %>%
+  # map aesthetics
+  ggplot(mapping = aes(x = bonding, y = qi_ci_median,
+                       ymin = qi_ci_min, ymax = qi_ci_max)) +
+  # plot a transparent ribbon
+  geom_ribbon(alpha = 0.5) +
+  # plot a line
+  geom_line() +
+  labs(x = "Bonding Social Capital (1-10)",
+       y = "Expected Vulnerability (1-10)\nwith 95% simulated confidence intervals")
+
+
+# Can you do this for bridging and linking social capital too, and try to combine them into one plot? Other ideas are fine too.
+#Nikki: Sure thing! Why specifically use 2017 and Chiba for the Zelig code? I'll use them for the rest of the plots for consistency
+
+
+#Bridging
+mysim2 <- z4 %>%
+  setx(bridging = seq(from = 1, to = 10, length.out = 30),
+       bonding = 1,
+       linking = 1,
+       year = "2017", region =  "Chubu") %>%
+  sim()  %>%
+  zelig_qi_to_df() %>%
+  qi_slimmer(qi_type = "ev", ci = 0.95)
+
+mysim2 %>%
+  ggplot(mapping = aes(x = bridging, y = qi_ci_median,
+                       ymin = qi_ci_min, ymax = qi_ci_max)) +
+  geom_ribbon(alpha = 0.5) +
+  geom_line() +
+  labs(x = "Bridging Social Capital (1-10)",
+       y = "Expected Vulnerability (1-10)\nwith 95% simulated confidence intervals")
+
+#Linking
+mysim3 <- z4 %>%
+  setx(linking = seq(from = 1, to = 10, length.out = 30),
+       bridging = 1,
+       bonding = 1,
+       year = "2017", region =  "Chubu") %>%
+  sim()  %>%
+  zelig_qi_to_df() %>%
+  qi_slimmer(qi_type = "ev", ci = 0.95)
+
+mysim3 %>%
+  ggplot(mapping = aes(x = linking, y = qi_ci_median,
+                       ymin = qi_ci_min, ymax = qi_ci_max)) +
+  geom_ribbon(alpha = 0.5) +
+  geom_line() +
+  labs(x = "Linking Social Capital (1-10)",
+       y = "Expected Vulnerability (1-10)\nwith 95% simulated confidence intervals")
+
+#all three
+
+
+mysim4 <- bind_rows(
+  mysim %>% rename(value = bonding), 
+  mysim2 %>% rename(value = bridging), 
+  mysim3 %>% rename(value = linking), 
+  .id = "type") %>% 
+  mutate(type = type %>% 
+           recode_factor(
+             "1" = "Bonding Social Capital",
+             "2" = "Bridging Social Capital",
+             "3" = "Linking Social Capital")) %>%
+  select(type, value, qi_ci_median, qi_ci_max, qi_ci_min)
+
+
+mysim4 %>% head()
+
+#I thought that maybe I could combine all of them into one graph by first making a sim that included all of them
+
+talldat <- bind_rows(
+  read_csv("raw_data/dataset.csv") %>%
+  # Select these key variables
+  select(vulnerability, value = bonding) %>%
+    mutate(type = "Bonding Social Capital"),
+   read_csv("raw_data/dataset.csv") %>%
+    select(vulnerability, value = bridging) %>%
+    mutate(type = "Bridging Social Capital"),
+   read_csv("raw_data/dataset.csv") %>%
+    select(vulnerability, value = linking) %>%
+    mutate(type = "Linking Social Capital")
+) %>%
+  group_by(type) %>%
+  mutate_at(vars(vulnerability, value), funs(scales::rescale(., to = c(1,10))))
+
+
+mycolors <- viridis::magma(n = 10, begin = 0.2, end = 0.8)[c(1,5,9)]
+
+
+g <- talldat %>%
+  ggplot(mapping = aes(x = value, y = vulnerability, fill = type)) +
+  geom_jitter(shape = 21, color = "white", alpha = 0.5, size = 3) +
+  
+  geom_ribbon(data = mysim4,       
+              mapping = aes(x = value, y = qi_ci_median, 
+                       ymin = qi_ci_min, ymax = qi_ci_max, fill = type),
+              color = "black", size = 0.2) +
+  labs(x = "Social Capital (Rescaled 1-10)",
+       y = "Expected Social Vulnerability (Rescaled 1-10)\nwith 95% simulated confidence intervals",
+       caption = "Note: Points indicate observed data; thin bands indicate 95% confidence intervals simulated in the Zelig package.\nVisual omits 63 observed cases with vulnerability from 1 to 5 for visibility.") +
+  facet_wrap(~type)  +
+  scale_fill_manual(values = mycolors) +
+  guides(fill = "none")  +
+  theme_classic(base_size = 14) +
+  theme(panel.border = element_rect(color = "black", fill = NA),
+        panel.spacing = unit(0.2, "cm"),
+        plot.caption = element_text(hjust = 0.5)) +
+  ylim(c(5, 10))
+
+ggsave(plot = g, filename = "viz/fixed_effect_ev.png", dpi = 500, height = 5, width = 8.5)
+
+
+rm(list = ls())
+```
+
+
+
+
+
+# 6. DiD Models (Difference-in-Differences Models)
+
+## 6.1. Models
+
+```{r}
+dat %>%
+  mutate(time = as.numeric(year)) %>% 
+  select(time, year) %>%
+  distinct()
+```
+
+```{r}
+library(tidyverse)
+library(Zelig)
+library(texreg)
+
+# Load in data
+dat <- read_csv("raw_data/dataset.csv") %>%
+  # Select these key variables
+  select(vulnerability, bonding, bridging, linking,
+         exp_dis_relief_per_capita, exp_public_works_per_capita, 
+         exp_social_assistance_per_capita, exp_fire_per_capita, pop, 
+         year, unemployment, financial_strength_index, death_rate, damage_rate, fukushima, 
+         total_migration, pref) %>%
+  # Adjust prefecture variable to remove the ending "-ken"
+  mutate(pref = pref %>% str_remove(pattern = "-ken|-to|-fu")) %>%
+  # Now code region by sorting prefectures into regions
+  mutate(region = case_when(
+    pref %in% c("Hokkaido") ~ "Hokkaido",
+    pref %in% c("Akita", "Aomori", "Fukushima", "Iwate", "Miyagi", "Yamagata") ~ "Tohoku",
+    pref %in% c("Chiba", "Gunma", "Gumma", "Ibaraki", "Kanagawa", "Saitama", "Tochigi", "Tokyo") ~ "Kanto",
+    pref %in% c("Fukui", "Niigata", "Toyama", "Ishikawa") ~ "Hokuriku",
+    pref %in% c("Aichi",  "Gifu", "Nagano", "Shizuoka", "Yamanashi") ~ "Chubu",
+    pref %in% c("Hyogo", "Kyoto", "Mie", "Nara", "Osaka", "Shiga", "Wakayama") ~ "Kansai",
+    pref %in% c("Hiroshima", "Okayama", "Shimane", "Tottori", "Yamaguchi") ~ "Chugoku",
+    pref %in% c("Ehime", "Kagawa", "Kochi", "Tokushima") ~ "Shikoku",
+    pref %in% c("Fukuoka","Saga", "Kagoshima", "Kumamoto", "Miyazaki", "Nagasaki", "Oita", "Okinawa") ~ "Kyushu")) %>%
+  # Make year a factor, so Zelig will pick it up
+  mutate(year = factor(year),
+         region = factor(region),
+         pref = factor(pref)) %>%
+  # adjust variables to avoid colinearity
+  mutate(disaster = (scale(death_rate) + scale(damage_rate)) / 2) %>%
+  mutate(exp_fire_per_capita = ntile(exp_fire_per_capita, 10)) %>%
+  mutate(exp_public_works_per_capita = ntile(exp_public_works_per_capita, 10)) %>%
+  mutate(bridging = ntile(bridging, 10)) %>%
+  mutate(exp_social_assistance_per_capita = ntile(exp_social_assistance_per_capita, 10)) %>%
+  # Exclude cities in the Fukushima exclusion zone, because they're basically incomparable
+  filter(fukushima != 1) %>%
+  # Impute using prefectural mean
+  group_by(pref, year) %>%
+  mutate_at(vars(exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+            funs(if_else(condition = is.na(.), true = mean(., na.rm = TRUE), false = as.numeric(.)))) %>%
+  ungroup() %>%
+  # Rescale all continuous variables into Z-scores
+  # (Zscore = mean centered at zero, counts number of standard deviations away from mean), 
+  # so their effect sizes are comparable
+  mutate_at(vars(vulnerability, bonding, bridging, linking,
+              exp_dis_relief_per_capita,  exp_public_works_per_capita,  
+              exp_social_assistance_per_capita,  exp_fire_per_capita,  
+              financial_strength_index,  pop,  disaster,  total_migration),
+       funs(scales::rescale(., to = c(1,10))))
+
+
+
+x1 <- dat %>%
+  mutate(time = as.numeric(year)) %>%
+  lm(formula = vulnerability ~ 
+       bonding + bridging + linking +
+       # Interaction (multiplication)
+       I(bonding * time) +
+       I(bridging * time) + 
+       I(linking * time) + 
+       pop +
+       year)
+
+# Model with controls and year fixed effect (+ expenditure/capita measures, financial strength index)
+x2 <- dat %>%
+  mutate(time = as.numeric(year)) %>%
+    lm(formula = vulnerability ~ 
+                bonding + bridging + linking +
+         I(bonding * time) +
+       I(bridging * time) + 
+       I(linking * time) + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + pop + 
+       financial_strength_index + # exclude unemployment - that's already in the vulnerability variable
+       year)
+
+# Model with extended controls and year fixed effect (+disaster, total migration)
+x3 <- dat %>%
+    mutate(time = as.numeric(year)) %>%
+  lm(formula = vulnerability ~ 
+              bonding + bridging + linking +
+       I(bonding * time) +
+       I(bridging * time) + 
+       I(linking * time) + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year)
+
+# Model with extended controls and year + region fixed effect (+region)
+x4 <-dat %>%
+    mutate(time = as.numeric(year)) %>%
+  lm(formula = vulnerability ~ 
+              bonding + bridging + linking +
+       I(bonding * time) +
+       I(bridging * time) + 
+       I(linking * time) + 
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year + region)
+
+
+
+
+texreg::htmlreg(
+  list(x1,x2,x3, x4), 
+  omit.coef = "year|region",
+  custom.model.names = c("Model 1<br>Basic Model",
+                         "Model 2<br>With Controls",
+                         "Model 3<br>Extended Controls",
+                         "Model 4<br>Regional Controls"), stars = c(0.001, 0.01, 0.05, 0.10),
+  include.fstat = TRUE,
+  custom.gof.rows = list(
+    "Mean VIF" = list(x1,x2,x3,x4) %>%
+      map(~car::vif(.)[,3]^2 %>% mean()) %>%
+      unlist(),
+    "LR Test (p-value)" = lmtest::lrtest(x1,x2,x3,x4) %>%
+      as.data.frame() %>%
+      mutate(value = paste(round(LogLik,1), gtools::stars.pval(`Pr(>Chisq)`), sep = "")) %>%
+      select(value) %>%
+      unlist()
+    ), digits = 3,
+  custom.coef.map = list(
+    "I(bonding * time)" = "Bonding Social Capital x Time",
+    "I(bridging * time)" = "Bridging Social Capital x Time",
+    "I(linking * time)" = "Linking Social Capital x Time",
+    
+    "bonding" = "Bonding Social Capital",
+    "bridging" = "Bridging Social Capital",
+    "linking" = "Linking Social Capital",
+    "pop" = "Population",
+    "financial_strength_index" = "Financial Strength Index",
+    "exp_dis_relief_per_capita" = "Disaster Relief Spending Rate",
+    "exp_fire_per_capita" = "Emergency Services Spending Rate",
+    "exp_public_works_per_capita" = "Public Works Spending Rate",
+    "disaster" = "Disaster Conditions",
+    "total_migration" = "Total Migration Rate",
+    "(Intercept)" = "Constant"),  
+  single.row = TRUE, bold = 0.10, 
+  custom.header = list("Social Vulnerability<br><i>Beta Coefficient (Standard Error)</i>" = 1:4),
+  caption.above = TRUE,
+  caption = "<b>OLS Difference-in-Differences Models of Social Vulnerability in 1730 Japanese Municipalities over 18 years</b><br><i>from 2000-2017 (n = 31,243) with annual fixed effects</i>",
+  custom.note = "<b>Statistical Significance</b>: *** p < 0.001, ** p < 0.01, * p < 0.05, . p < 0.10.<br><br><b>LR Test</b>: Likelihood Ratio tests indicate how much each model improved the log-likelihood compared to the previous model. A statistically significant increase in the log-likelihood reported indicates a better model. All tests indicate our final model fits best.<br><br><b>Note 1</b>: Beta coefficients indicate the projected increase in a city's social vulnerability index (1-10) given a 1-unit increase in the predictor on a scale from 1 (minimum) to 10 (maximum). All predictors were rescaled from 1 (minimum) to 10 (maximum) to allow comparison of effect sizes.<br><br><b>Note 2</b>: Average treatment effects reflect the projected increase in social vulnerability given a 1-unit increase in the predictor as time increases from by 1. Time measured from 1-18 where 1 = 2000, 2 = 2001, etc.",
+  groups = list(
+    "<b>Average Treatment Effects<br>for Independent Variables</b>" = 1:3,
+    "<b>Controls for Direct Effects<br>of Independent Variables</b>" = 4:6,
+    "<b>Control Variables</b>" = 7:14),
+  file = "viz/table_2.html")
+
+
+list(x1,x2,x3,x4) %>%
+  saveRDS("did_models.rds")
+
+
+```
+
+## 6.2 Visual
+
+```{r}
+
+z4 <-dat %>%
+    mutate(time = as.numeric(year)) %>%
+    zelig(formula = vulnerability ~ 
+              bonding * time + 
+            bridging * time +
+            linking * time +
+       exp_dis_relief_per_capita + exp_public_works_per_capita + exp_fire_per_capita + 
+       financial_strength_index + pop + 
+       disaster + total_migration +
+       year + region - time, model = "ls")
+
+
+
+get_fd = function(mysimulation){
+  data.frame(fd = mysimulation$sim.out$x1$fd %>% unlist(),
+             x = mysimulation$sim.out$x$ev %>% unlist(),
+             x1 = mysimulation$sim.out$x1$ev %>% unlist()) %>%
+    return()
+}
+
+# Simulate first differences (fd)
+mysim <- bind_rows(
+  
+  z4 %>%
+    sim(., x = setx(., bonding = 1, bridging = 1, linking = 1, 
+                    time = 1, year = "2000", region = "Chubu"),
+        x1 = setx1(., bonding = 10, bridging = 1, linking = 1, 
+                   time = 18, year = "2017", region = "Chubu")) %>%
+    get_fd() %>%
+    mutate(variable = "Bonding Social Capital"),
+  z4 %>%
+    sim(., x = setx(., bonding = 1, bridging = 1, linking = 1, 
+                    time = 1, year = "2000", region = "Chubu"),
+        x1 = setx1(., bonding = 1, bridging = 10, linking = 1, 
+                   time = 18, year = "2017", region = "Chubu")) %>%
+    get_fd() %>%
+    mutate(variable = "Bridging Social Capital"),
+  z4 %>%
+    sim(., x = setx(., bonding = 1, bridging = 1, linking = 1, 
+                    time = 1, year = "2000", region = "Chubu"),
+        x1 = setx1(., bonding = 1, bridging = 1, linking = 10, 
+                   time = 18, year = "2017", region = "Chubu")) %>%
+    get_fd() %>%
+    mutate(variable = "Linking Social Capital")
+) %>%
+  pivot_longer(cols = c(x,x1), names_to = "type", values_to = "value") %>%
+  
+  
+  mutate(type = case_when(
+    type == "x" & variable == "Bonding Social Capital" ~ "Low (1)\nBonding\nin 2000",
+    type == "x" & variable == "Bridging Social Capital" ~ "Low (1)\nBridging\nin 2000",
+    type == "x" & variable == "Linking Social Capital" ~ "Low (1)\nLinking\nin 2000",
+    
+    type == "x1" & variable == "Bonding Social Capital" ~ "High (10)\nBonding\nin 2017",
+    type == "x1" & variable == "Bridging Social Capital" ~ "High (10)\nBridging\nin 2017",
+    type == "x1" & variable == "Linking Social Capital" ~ "High (10)\nLinking\nin 2017",
+    TRUE ~ "") %>%
+      factor(levels = c("Low (1)\nBonding\nin 2000",
+                        "High (10)\nBonding\nin 2017",
+                        "Low (1)\nBridging\nin 2000",
+                        "High (10)\nBridging\nin 2017",
+"Low (1)\nLinking\nin 2000",                        "High (10)\nLinking\nin 2017")),
+    level = as.numeric(type))
+
+
+
+# Calculate confidence intervals of first differences
+myfd <- mysim %>%
+  group_by(variable) %>%
+  summarize(median = median(fd), 
+            upper = quantile(fd, probs = 0.975),
+            lower = quantile(fd, probs = 0.025),
+            p_value = case_when(
+              0 > quantile(fd, 0.0005) & 0 > quantile(fd, 0.9995) ~ "***",
+              0 < quantile(fd, 0.0005) & 0 < quantile(fd, 0.9995) ~ "***",
+              0 > quantile(fd, 0.005) & 0 > quantile(fd, 0.995) ~ "**",
+              0 < quantile(fd, 0.005) & 0 < quantile(fd, 0.995) ~ "**",
+              0 > quantile(fd, 0.025) & 0 > quantile(fd, 0.975) ~ "*",
+              0 < quantile(fd, 0.025) & 0 < quantile(fd, 0.975) ~ "*",
+              0 > quantile(fd, 0.05) & 0 > quantile(fd, 0.95) ~ ".",
+              0 < quantile(fd, 0.05) & 0 < quantile(fd, 0.95) ~ ".",
+              TRUE ~ "")) %>%
+  ungroup() %>%
+  mutate(label = paste(round(median, 2), p_value,
+                       "\n(", round(lower, 2), " to ", round(upper, 2), ")", sep = ""))
+
+
+mycolors <- viridis::magma(n = 10, begin = 0.2, end = 0.8)[c(1,5,9)]
+
+g2 <- myfd %>%
+  ggplot(mapping = aes(x = variable, y = "0.00", 
+                       label = label, fill = variable)) +
+  geom_tile(fill = NA, color = NA) +
+  geom_label(color = "white", size = 5) +
+  facet_grid(~variable, scales = "free") +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.text.y = element_text(color = "white"),
+    axis.ticks = element_blank(),
+        axis.title.y = element_text(angle = 90, hjust = 0.5),
+        panel.border = element_rect(fill = NA, color = "black"),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  labs(subtitle = "Simulated Treatment Effects (with 95% Confidence Intervals)",
+       y = "Expected\nEffect",
+       x = NULL) +
+  scale_fill_manual(values = mycolors) +
+  guides(fill = "none")
+
+
+mysum <- mysim %>%
+  group_by(type, variable) %>%
+  summarize(median = median(value),
+            upper = quantile(value, probs = 0.975),
+            lower = quantile(value, probs = 0.025)) %>%
+  ungroup()
+
+
+g1 <- mysim %>%
+  # Get 95%
+  group_by(type, level, variable) %>%
+  filter(fd > quantile(fd, probs = 0.025) &
+           fd < quantile(fd, probs = 0.975)) %>%
+  ungroup() %>%
+  # Plot frame
+  ggplot(mapping = aes(x = type, y = value)) +
+  geom_jitter(mapping = aes(x = type, y = value, fill = variable), 
+              alpha = 0.5, shape = 21, size = 2, color = "white") +
+  geom_line(data = mysum, mapping = aes(x = type, y = median, group = variable, color = variable), 
+            size = 2) +
+  geom_violin(mapping = aes(x = type, y = value, fill = variable), 
+              draw_quantiles = 0.5, size = 0.3, color = "black") +
+  geom_label(data = mysum, mapping = aes(x = type, y = median, label = round(median, 2))) +
+  facet_wrap(~variable, scales = "free_x") +
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black"),
+        panel.grid.minor = element_blank(),
+        plot.caption = element_text(hjust = 0.5)) +
+  scale_fill_manual(values = mycolors) +
+  scale_color_manual(values = mycolors) +
+  guides(fill = "none", color = "none") +
+  labs(x = "Level of Specified Type of Social Capital (Rescaled 1-10)",
+       caption = "Note: Simulations made holding all other types of social capital at their minimum (1)\nand all other predictors at their means or modes. Points and violins show 95% confidence interval.\nLabels indicate median expected vulnerability given low vs. high levels of social capital.",
+       y = "Expected\nSocial Vulnerability (1-10)")
+
+
+
+g <- ggpubr::ggarrange(g2,g1, 
+                       nrow = 2,
+                       heights = c(2,5), 
+                       labels = c("A","B")) +
+  ggpubr::bgcolor("white") +
+  ggpubr::border("white")
+
+ggsave(plot = g, filename = "viz/did_fd.png", dpi = 500, height = 6, width = 8.5)
+
+```
+
+
+
+

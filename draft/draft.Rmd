@@ -1,0 +1,547 @@
+---
+title: Better Together? The role of Social Capital in Urban Social Vulnerability
+
+author:
+  - name: Timothy Fraser
+    email: timothy.fraser.1@gmail.com
+    orcid: 0000-0002-4509-0244
+    url: www.timothyfraser.com
+    affiliation: Northeastern University
+    footnote: 1
+  - name: Nicole Naquin
+    email: naquin.nikki@gmail.com
+    affiliation: Northeastern University
+    
+address:
+  - code: Northeastern University
+    address: Department of Political Science, 360 Huntington Ave, Boston, MA, 02115
+
+footnote:
+  - code: 1
+    text: "Corresponding Author"
+    
+keywords: 
+  - social vulnerability,
+  - social capital,
+  - disaster,
+  - cities,
+  - resilience,
+  - Japan
+abstract: |
+  This study examines why some communities are more vulnerable than others, focusing on the transformative effect of residents’ social capital on changing levels of vulnerability over time. We examine the case of Japan, the third largest economy in the world. Japan faces dozens of earthquakes, floods, and typhoons each year, but some communities are more socially vulnerable in the face of disaster than others. Drawing on difference-in-differences models and matching experiments, we test the effect of bonding, bridging, and linking social capital on vulnerability. We find that controlling for cities’ governance capacity, resource demand based on population, and damage from recent hazards, higher levels of bonding social capital in a community leads to lower levels of vulnerability. However, other types of social capital do not immediately lead to lower vulnerability, implying that greater government support is necessary in these cases.
+
+journal: "Social Science Research Network"
+date: "`r Sys.Date()`"
+bibliography: mybibfile.bib
+#linenumbers: true
+#numbersections: true
+csl: elsevier-harvard.csl
+always_allow_html: true
+output: 
+  rticles::elsevier_article:
+    includes:
+      in_header: header.tex 
+header-includes:
+  - \usepackage{caption}
+---
+
+\captionsetup[table]{labelformat=empty}
+\captionsetup[figure]{labelformat=empty}
+
+
+Introduction
+==========================
+
+Over the last 20 years, climate change induced hazards have come to strike with increasing frequency, forcing cities worldwide to grapple with storms, floods, and fires at alarming rates. Even developed countries that regularly encounter disasters, like Japan, must now adapt to changing conditions. For example, in October 2019, Typhoon Hagibis traveled across the Japanese mainland of Honshu. While typhoons are a regular part of the late summer in Japan, Hagibis was on another level. The typhoon's winds of 180 km per hour and gusts up to 252 km per hour cut power to 425,000 homes, bringing record-breaking rainfall and flooding, levying 75 cm of rain to the Shizuoka Prefecture's Izu Peninsula and 39.3 cm of rain to Kanto region, home to Tokyo. These rains triggered an estimated 1,900 landslides [@reuters_2019]. Storms and floods like these cut of access to transportation networks [@santos_et_al_2021], leaving residents dependent on each other to respond to the crisis until transit resumes. During such times, socially vulnerable households are at especially high risk.^[All data and replication code for this study is publicly available on the Harvard Dataverse at: https://doi.org/10.7910/DVN/YCUNHJ]
+
+#### The Puzzle
+
+_Social vulnerability_ refers to social characteristics including (but not limited to) race, socioeconomic status, age, health, and language proficiency, which are linked to greater disaster exposure and harm [@morrow_1999; @cutter_et_al_2003; @fothergill_and_peek_2004; @cutter_and_emrich_2006; @thomas_et_al_2013; @reid_2013]. Cities with higher shares of socially vulnerable residents tend to see less evacuation [@perry_and_lindell_1991; @riad_et_al_1999; @whitehead_et_al_2001; @wilson_and_tiefenbacher_2012], greater mortality [@sharkey_2007; @aida_et_al_2017; @aldrich_and_sawada_2015], and weaker recovery [@finch_et_al_2010; @domingue_and_emrich_2019; @fraser_2021_IJDRR]. As a result, a top priority for residents, scholars, and policymakers in this era of climatic hazards is to identify, _what factors decrease the social vulnerability of communities?_
+
+While past scholars have pointed to social welfare policies [@tselios_et_al_2019], investment in public goods and governance capacity [@edgington_2010; @hallerod_et_al_2013; @daoud_et_al_2016], and adjustments to the urban environment [@santos_et_al_2021], a burgeoning field indicates that social capital - the social ties that build trust and reciprocity between residents [@putnam_2000] - repeatedly improves disaster outcomes for vulnerable communities [@fraser_et_al_2021_NH; @aldrich_and_sawada_2015; @aldrich_and_meyer_2015]. Beyond their effect on disaster impacts, this study investigates to what degree social capital may help reduce levels of social vulnerability outright. Naturally, some aspects of social vulnerability result from racism and discrimination against unchanging demographic traits, like ethnic out-groups and persons with disabilities; other aspects, especially those having to do with socioeconomic status, could be greatly shaped by social support. Using a quasi-experiment on the full universe of 1741 Japanese cities from 2000 to 2017, we test the effects of three types of social capital on levels of social vulnerability over time. 
+
+#### Contributions
+
+Our findings make two major contributions to the literature. First, this study demonstrates the utility of using publicly available data to measure and estimate vulnerability and social capital. This study applied indices developed by @fraser_2021_IJDRR, building on the approaches of @kyne_and_aldrich_2020 for measuring social capital in US counties and @cutter_et_al_2003 for measuring social vulnerability. This study adds greater external validity for these measures, showing expected associations in Japan, highlighting that these are useful measures outside of the US, in countries with sufficient data collection infrastructure.
+
+Second, we find that **bonding social ties** - close, in-group ties between friends and neighbors - are linked to reductions in social vulnerability over time. Meanwhile, **bridging social ties** - inter-group ties linking members of different social strata - show no significant associations with change in vulnerability, nor do **linking social ties** - the vertical ties connection residents with authorities. Past scholars highlighted that some types of social capital aid community resilience while others hinder it - a theory dubbed the Janus-faced nature of social capital (Aldrich 2012; Aldrich, Page-Tan, & Fraser 2018). Our findings add further support for this theory, but highlight that the main type of ties strong enough to impact vulnerability on a day-to-day basis seem to be bonding ties, not bridging or linking ties.
+
+Literature Review
+==========================
+
+## Social Vulnerability
+
+This study investigates to what degree social vulnerability is associated with social capital. Social vulnerability has been a main focus of disaster and sustainability research over the last two decades [@perry_and_lindell_1991; @riad_et_al_1999; @cutter_et_al_2006; @sharkey_2007; @hamideh_and_rongerude_2018; @domingue_and_emrich_2019; @fraser_et_al_2021_NH], stemming from major inequities arising from response, evacuation, and recovery after crises like the Kobe Earthquake in 1995 [@edgington_2010; @aldrich_2012], Hurricane Katrina in the US [@cutter_et_al_2006; @finch_et_al_2010], and the 2011 triple disaster in Japan [@aldrich_2019; @aldrich_and_sawada_2015]. 
+
+Social vulnerability refers to the added dangers and impacts of disasters linked to race, socioeconomic status, gender, age, and health status; these impacts derive from the added discrimination, mobility constraints, and more that residents from vulnerable demographic groups on a daily basis [@enarson_1998; @fothergill_et_al_1999; @cutter_et_al_2003; @flanagan_et_al_2011; @flanagan_et_al_2018; @deng_et_al_2021]. 
+
+Three decades of extensive research has highlighted that some cities face greater social vulnerability than others, significantly increasing mortality and limiting recovery [@sharkey_2007; @aida_et_al_2017; @aldrich_and_sawada_2015; @finch_et_al_2010; @domingue_and_emrich_2019], hindering evacuation [@perry_and_lindell_1991; @riad_et_al_1999; @whitehead_et_al_2001; @wilson_and_tiefenbacher_2012; @raker_and_elliott_2018; @lucero_et_al_2020; @deng_et_al_2021], and limiting participation and equitable distribution of benefits from climate change adaptation [@chapman_et_al_2016; @burke_and_stephens_2017; @chapman_and_shigetomi_2018; @sunter_et_al_2019]. 
+
+#### Vulnerability over time
+
+Past studies investigated vulnerability at several different points along the disaster timeline. By 'disaster timeline,' we mean the idea that evacuation, response, recovery, and adaptation all exist as linked points in a repetivitve cycle for cities facing frequent hazards. Cities with higher shares of socially vulnerable residents tend to evacuate at lower rates [@perry_and_lindell_1991; @riad_et_al_1999; @whitehead_et_al_2001; @wilson_and_tiefenbacher_2012, @nakai_et_al_2016), face higher mortality during @sharkey_2007; @aida_et_al_2017] and after the disaster [@aldrich_and_sawada_2015], receive recovery funding at varying rates not always matching their needs [@domingue_and_emrich_2019], and see weaker recovery long-term [@finch_et_al_2010]. 
+
+
+#### Evacuation and Response
+
+Past studies of evacuation and response, for example, examined the movement behavior of vulnerable populations following evacuation orders (Martin et al. 2017), which showed disconnects between damage-motivated evacuation orders and actual evacuation rates among communities of color [@riad_et_al_1999; @whitehead_et_al_2001; @deyoung_et_al_2016; @lucero_et_al_2020], and particularly residents with less trust in government [@manuell_and_cukor_2011; @fraser_et_al_2021_CRM]. In the age of COVID-19, vulnerable residents much now also balance risk of exposure to COVID-19 with risk from hurricanes and such hazards when choosing whether to evacuate, adding new layers of vulnerability [@page-tan_and_fraser_2022; @collins_et_al_2021].
+
+
+#### Recovery
+
+Similarly, studies of recovery indicate that supplying funding for reconstruction is not enough to remedy inequities, and sometime can entrench those inequities, depending on how and by whom reconstruction funds are spent [@finch_et_al_2010; @fraser_et_al_2021_GEC; @domingue_and_emrich_2019].Diverging crisis outcomes by levels of vulnerability have persisted during the current COVID-19 pandemic as well [@yoshikawa_and_kawachi_2021; @page-tan_and_corbin_2021]. While some promising evidence suggests that discrimination against vulnerable groups can decrease after disasters in the medium and long term [@ye_and_aldrich_2021], there is a disturbing tendency for vulnerable groups to face increased discrimination in the short term after disasters, as occurred in the 1923 Grant Kanto Earthquake against Koreans residents in Tokyo [@aldrich_2011] and Hurricane Katrina in 2005 [@raker_and_elliott_2018], among others. In the long-term, neighborhoods affected by disaster tend to see population turnover, with wealthier, privileged social groups buying out original residents [@raker_2020; @edgington_2010] Instead, broad efforts are necessary to remedy underlying social inequities during crisis for women, people of color, religious minorities, persons with health conditions or disabilities, and other indicators of vulnerability. Without tackling these equity issues, no sustainable transition is truly sustainable [@campbell_1996].
+
+## What Factors alleviate Vulnerability?
+
+While social vulnerability is frequently linked to different (worse) climate resilience outcomes, some vulnerable communities have seen changing levels of vulnerability over time [@cutter_and_finch_2008]. Past studies have highlighted the powerful role that several factors can play in alleviating social vulnerability. We summarize these in **Table 1**.
+
+```{r table1, message=FALSE, warning = FALSE, out.width = "100%",  dpi=500, echo = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+data.frame(
+  Type = c(
+    "Outcome", 
+    "Independent Variables",
+    "",
+    "",
+    "Temporal Effects",
+    "Mandatory Controls",
+    "Basic Controls",
+    "",
+    "",
+    "",
+    "Extended Controls",
+    "",
+    "Regional Controls"),
+  Concept = c(
+    "Social Vulnerability",
+    "Bonding Social Capital",
+    "Bridging Social Capital",
+    "Linking Social Capital",
+    "Time",
+    "Population",
+    "Governance Capacity",
+    "Policy Tools",
+    "",
+    "",
+    "Damage",
+    "Social Cohesion",
+    "Geography"),
+  Indicator = c(
+    "Fraser (2021) Indices",
+    "Fraser (2021) Indices",
+    "",
+    "",
+    "Annual Fixed Effects",
+    "Population",
+    "Financial Strength Index",
+    "Disaster Relief Spending Rate",
+    "Emergency Services Spending Rate",
+    "Public Works Spending Rate",
+    "Disaster Conditions",
+    "Total Migration Rate",
+    "Regional Fixed Effects")
+) %>%
+ kable(
+    caption = "Table 1: Key Concepts and Proxies",
+    booktabs=TRUE) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "left",
+    latex_options = c("striped"),
+    stripe_index = c(1,5, 7:10,13)) %>%
+  row_spec(1, hline_after = TRUE)
+```
+
+
+#### Governance Capacity
+
+Governance capacity, measured in terms of spending, have been linked to improvements in resilience outcomes for vulnerable neighborhoods [@edgington_2010; @farag_et_al_2013; @hallerod_et_al_2013; @daoud_et_al_2016; @bollyky_et_al_2019], aiding evacuation [@keogh_et_al_2011; @adalja_et_al_2014; @das_2019] and promoting mitigating measures like renewable energy adoption [@rabe_2004; @takao_2012; @meckling_and_nahm_2018]. Unfortunately, increasing governance capacity to help mitigate residents' vulnerability during crisis is an expensive task involving much institutional change. 
+
+#### Policy Tools
+
+Instead, cities may reduce levels of vulnerability in their cities by improving the social environment through their choice of policy tools [@hood_and_margetts_2007; @salamon_1989]. While investments in infrastructure quality are common responses to some disasters, investments in _social_ infrastructure have been linked to improved resilience outcomes among elderly, unemployed, rural, repeatedly damaged cities, and more [@aldrich_and_kiyota_2017; @fraser_et_al_2021_GEC; @he_et_al_2021]. Similarly, local governments' policy tool choices have made major impacts on vulnerable communities during the pandemic [@page-tan_and_corbin_2021]. A more common 'soft policy' tool for reducing social vulnerability in cities is social welfare funding, which includes support for public housing, food security, unemployment insurance, and more [@tselios_et_al_2019].
+
+#### Social Capital
+
+Finally, a burgeoning field of literature suggests that some communities respond and recover from disaster better due to the strength and density of social ties in their community, which help residents share resources and organize during crisis (and even in everyday struggles) [@aldrich_and_sawada_2015; @hamideh_and_rongerude_2018; @hamideh_2020; @talbot_et_al_2020; @pagetan_2021; @lee_2020; @fraser_et_al_2022_EIST; @fraser_et_al_2021_NH]. Scholars typically break social capital into three types [@aldrich_and_meyer_2015]: This includes **bonding ties** between members of the same social strata, which help members of the same race, ethnicity, gender, age, etc. recover and respond to crisis, but tends to leave out others [@aldrich_and_crook_2008; @elliott_et_al_2010; @cox_et_al_2011; @aldrich_2012]. This also includes **bridging ties** between members of different strata, which help share resources between different racial, ethnic, religious, and other groups [@putnam_2000; @lee_2020; @fraser_2021_IJDRR], and **linking ties** connecting residents and officials, promoting trust in government [@szreter_and_woolcock_2004; @tsai_2007; @aldrich_2019; @fraser_and_aldrich_2021_SR].
+
+However, due to limited time and resources, in practice, no one community can maximize all three types of social capital at once; as a result, past studies find frequent 'tradeoffs' between different types of social capital. This dynamic demonstrates the Janus-faced nature of social capital [@aldrich_and_crook_2008; @aldrich_et_al_2018].
+
+While the benefits of social capital to vulnerable communities during crisis are well understood [@fraser_et_al_2021_NH], it is less clear whether social capital can produce long term changes in the level of social vulnerability in cities. Many practitioners in the field might hope that community-building efforts could build dynamic neighborhoods with active economies and diverse age groups, employment and educational opportunities across racial and ethnic divisions, and more, reducing levels of poverty and related aspects of vulnerability in the process. However, few studies have explored this question at a macro level over time.
+
+Hypotheses
+==========================
+
+Could grassroots ties and engagement have the potential to level the playing field and build more resilient neighborhoods in vulnerable cities? We outline several hypotheses to investigate the correlates of changing levels of vulnerability over time.
+
+- We hypothesize that (**H1**) cities with stronger bonding social capital experience ***less*** social vulnerability, because strong ties between family and friends help people access key financial and human resources. 
+
+This is in contrast to the Janus-faced nature of social capital, which suggests that stronger bonding social capital will experience greater social vulnerability, because people with strong ties within their in-group might not be as inclined to share support with residents outside their social in-groups. Additionally, we make two more hypotheses:
+
+- We expect that (**H2**) cities with strong bridging social ties will experience ***less*** social vulnerability, because those ties help residents engage in mutual aid and assistance.
+
+- Meanwhile, we expect that (**H3**) cities with strong linking social ties will experience ***less*** social vulnerability, as residents use ties to local officials to obtain needed public goods like food, shelter, income assistance, and emergency services.
+
+
+
+Methods
+==========================
+
+This study investigates why some communities experience greater social vulnerability than others, testing the effect of different types of social capital on vulnerability. We investigate the case of 1730 municipalities in Japan, tracked from 2000 to 2017, constituting a panel dataset of 31,243 municipality-years. 
+
+#### Case Selection
+
+Japan is a major developed democracy and the world’s 3rd largest economy, making it a useful case study in social vulnerability in industrialized democracies; further, it regularly experiences disasters, making it a perhaps more useful comparison case with countries experiencing increasingly more disasters today, like the US. Below, we outline variables used in our analysis and our modeling strategy.
+
+### Variables
+
+This study relied on several proxies to approximate social vulnerability and its correlates, summarized in **Table 1.** To measure social vulnerability and social capital, we use a set of indices developed by @fraser_2021_IJDRR, measured for each of Japan's 1741 municipalities between 2000 and 2017. 
+
+#### Dependent Variable
+
+As our outcome, we employ the social vulnerability index, a measure from 0 (lowest vulnerability) to 1 (highest vulnerability), which used principal component analysis (PCA) to combine 19 indicators of social vulnerability linked to demographics, population structure, socioeconomic status, employment, housing, and social dependence. These indices' methodology adapted the PCA methods and indicators used in the US Social Vulnerability Index of @cutter_et_al_2003, and align closely with other vulnerability indices [eg. @flanagan_et_al_2011; @flanagan_et_al_2018]. 
+
+#### Independent Variables
+
+As our independent variables, we use @fraser_2021_IJDRR's corresponding bonding, bridging, and linking social capital indices. Each model is scaled from 0 (lowest connectivity) to 1 (highest connectivity). These indices adapt @kyne_and_aldrich_2020's framework for measuring social capital from publicly available data in US counties. The bonding index measures in-group ties by proxy, averaging 7 indicators of 'homophily' in terms of nationality, income age, and basic connectivity in communities [@cox_et_al_2011; @elliott_et_al_2010; @alcorta_et_al_2020]. Homophily refers to what share of residents in a community hail from the same social strata [@alesina_et_al_1999]; higher shares of residents from the same nationality, age group, gender, educational background, etc. means literally more potential *in-group ties* for members of the same background [@mouw_2006]. The index captures similarity in terms of nationality, religious, education, employment equality by gender, employment equality overall, and age, as well as communication capacity [@kyne_and_aldrich_2020]. 
+
+The bridging social capital index measures inter-group ties using rates of associations [@putnam_2000], since civil society associations help bridge different groups, building trust and reciprocity across group lines [@aldrich_and_sawada_2015; @lee_2020]. The index averages 8 measures of associational participation in civil society, including rates of nonprofits, religious organizations, unions, volunteerism, voter turnout, and rates of social infrastructure like libraries and community centers [@leblanc_1999; @pekkanen_2006; @haddad_2007; @norris_2008; @aldrich_and_kiyota_2017; @klinenberg_2018].
+
+Finally, the linking social capital index measures vertical ties between residents and officials using 6 measures of representation and access to officials [@aldrich_2019], including rates of government employees, police, and prefectural assembly members per capita, as well as shares of residents who voted for the ruling party in recent elections, since these constituencies tend to have greater pull over their legislators [@fukui_and_fukai_1996; @hood_2006; @catalinac_et_al_2020].
+
+These indices have demonstrated extensive internal and external validity [@fraser_2021_IJDRR], producing expected associations between social capital and health [@fraser_and_aldrich_2021_SR], evacuation [@fraser_et_al_2021_CRM], provision of public goods [@fraser_et_al_2022_EIST], and collective action [@fraser_and_temocin_2021_CC], among others. For more details on these index, please see @fraser_2021_IJDRR.
+
+#### Control Variables
+
+In addition, we use several other variables as controls. To capture governance capacity, we used each city's financial strength index, capturing the funds and assets available for the city. To represent policy tool choice, we used rates of spending on public works, emergency services, and disaster relief. To capture changes to social cohesion due to human migration, we used the total migration rate. These variables were all sourced from the Japan Statistics Bureau [@estat]. 
+
+To control for disaster conditions, we obtained rates of deaths and damaged buildings per capita for each municipality in the 2011 tsunami [@aldrich_2019; @aldrich_and_sawada_2015], rescaled each as Z-scores with their means centered at zero, and took the average of both. Higher values represent higher deaths or damages on average, while lower values represent lower deaths or damages, in units of standard deviations from the mean. Finally, we used 9 categories as regional controls (including Hokkaido, Tohoku, Hokuriku, Kanto, Chubu, Kansai, Chugoku, Shikoku, and Kyushu). 
+
+## Modeling
+
+#### Difference-in-Differences Quasi-Experiments
+
+To test our hypotheses, we employ difference-in-differences (DiD) OLS fixed effects models. DiD models are a popular example of quasi-experimental techniques used in economics, political science, and public health to evaluate the treatment effect of a variable over time [@angrist_and_pischke_2008; @shadish_et_al_2002, @abadie_et_al_2010; @abadie_et_al_2015; @ando_2015; @xu_2017]. Our observational models use continuous treatment variables (social capital indices), comparing how much greater a level of social vulnerability a city experiences with each year as the level of the treatment increases, compared to before receiving increases in the treatment variable. 
+
+We generated four models in **Table 2**. In each model, we tested the average treatment effects over time of bonding, bridging, and linking social capital, using the product of the number of years (1-18) and each specific type of social capital, totaling three interaction effects. At the same time, each model adjusted for the direct  effect of bonding, bridging, and linking social capital, with annual fixed effects to account for the independent effect of each year. This quasi-experiment gives us a close glimpse at what levels of vulnerability might have looked like, had communities' social capital not improved.
+
+#### Adding Controls
+
+In each model, we added subsequent controls. First, we controlled for just the population of each city (Model 1). Second, we applied a range of controls, adjusting for each city’s governance capacity (via financial strength index) and each city’s spending (via disaster relief spending, emergency services spending, and public works spending, all per 1,000 residents) (Model 2). Third, we added supplementary controls for disaster conditions and total migration rates (Model 3). Fourth, we added controls for each of Japan’s 10 regions to ensure that effects were due to city’s traits, not the conditions over their overall geography (Model 4). These controls ensure that our average treatment effects of social capital are accurate and do not reflect confounding variables. Additionally, the fact that our independent variables' average treatment effects remain consistent across different model specifications helps ensure these effects are not artifacts of the model.
+
+
+\newpage
+\blandscape
+
+
+```{r table2, message=FALSE, warning = FALSE,  echo = FALSE, dpi=500,  out.width="100%"}
+library(tidyverse)
+library(texreg)
+library(knitr)
+library(kableExtra)
+
+# Many thanks to the beautiful latex solution on StackOverflow
+# describing how to add landscape tables
+# https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf
+
+mymodels <- read_rds("/cloud/project/did_models.rds")
+
+table1_short <- texreg::matrixreg(
+  l = mymodels,
+  omit.coef = "year|region",
+  custom.model.names = c("1. Basic",
+                         "2. Controls",
+                         "3. Extended",
+                         "4. With Regions"), 
+  stars = c(0.001, 0.01, 0.05, 0.10),
+  include.fstat = TRUE,
+  custom.gof.rows = list(
+  # "Mean VIF" = mymodels %>%
+  #    map(~car::vif(.)[,3]^2 %>% mean()) %>%
+  #    unlist(),
+    "LR Test (p-value)" = lmtest::lrtest(mymodels[[1]], mymodels[[2]],
+                                         mymodels[[3]], mymodels[[4]]) %>%
+      as.data.frame() %>%
+      mutate(value = paste(round(LogLik,1), gtools::stars.pval(`Pr(>Chisq)`), sep = "")) %>%
+      select(value) %>%
+      unlist()
+  ), digits = 3,
+  custom.gof.names = c("R2", NA, NA),
+  single.row = TRUE, bold = 0.10, 
+  custom.header = list("Outcome: Social Vulnerability - Beta Coefficient (Standard Error)" = 1:4),
+  caption.above = TRUE,
+  include.adjr = FALSE,
+  #groups = list("Treatment Effects" = 1:3),
+  custom.coef.map = list(
+    "I(bonding * time)" = "Bonding x Time",
+    "I(bridging * time)" = "Bridging x Time",
+    "I(linking * time)" = "Linking x Time",
+    "bonding" = "Bonding SC",
+    "bridging" = "Bridging SC",
+    "linking" = "Linking SC",
+    "pop" = "Population",
+    "financial_strength_index" = "Financial Strength",
+    "exp_dis_relief_per_capita" = "Disaster Relief Exp.",
+    "exp_fire_per_capita" = "Emergency Services Exp.",
+    "exp_public_works_per_capita" = "Public Works Exp.",
+    "disaster" = "Disaster Conditions",
+    "total_migration" = "Total Migration Rate",
+    "(Intercept)" = "Constant"),  
+  center = TRUE,
+    groups = list(
+    "Treatment Effects" = 1:3,
+    "Direct Effects" = 4:6,
+    "Controls" = 7:14)
+)
+
+#  caption = "
+#  custom.note = NULL,
+
+
+table1_short[-1,] %>%
+  as_tibble() %>%
+  magrittr::set_colnames(value = table1_short[1,]) %>%
+  kable(
+    caption = "Table 1: OLS Difference-in-Differences Models of Social Vulnerability in 1730 Japanese Municipalities over 18 years from 2000-2017 (n = 31,243) with annual fixed effects.",
+    label = NA,
+    booktabs=TRUE) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "left",
+    latex_options = c("striped")
+    ) %>%
+  row_spec(row = c(1, 5, 9), bold=TRUE) %>%
+  row_spec(17, hline_after = TRUE) %>%
+  footnote(
+    threeparttable = TRUE,
+    alphabet = c(
+      "Statistical Significance: *** p < 0.001, ** p < 0.01, * p < 0.05, . p < 0.10.",
+      "LR Test: Likelihood Ratio tests show how much new model improved log-likelihood, versus previous model. Statistically significant increase in log-likelihood means better model. Tests show model 4 fits best.",
+      "Effects: Beta coefficients indicate the projected increase in city's vulnerability index (1-10) given 1-unit increase in predictor on a scale from 1 (min) to 10 (max). All predictors rescaled from 1 to 10 for easy comparison of effect sizes. Treatment effects show projected increase in vulnerability given a 1-unit increase in predictor as time increases from by 1. Time measured from 1-18 (1 = 2000, 2 = 2001, etc.)",
+      "Exp. refers to spending, normalized by population.")
+    )
+
+```
+
+\elandscape
+\newpage
+
+#### Validation Tests
+
+As validation tests, we repeated these four models in **Appendix Table A1** using simple fixed effects models with no interaction effects (Model 5-8). This presents the direct effects of bonding, bridging, and linking social capital over time, adjusting for control variables and fixed effects. These revealed very consistent results between our DiD average treatment effects and our direct effects for independent variables in fixed effects models.
+
+
+### Goodness of Fit
+
+Our models demonstrated no data collinearity problems, demonstrated by low variance inflation factor scores in our fixed effects models near 2.5, the gold standard, and well below 10, the threshold for problematic collinearity. Our DiD models demonstrated some collinearity by definition, since they contain interaction effects, but the low VIF scores of our fixed effects models lacking these interaction effects ensure that collinearity does not affect the estimates of our DiD models either. Finally, all variables were rescaled from 1 (minimum) to 10 (maximum) to allow comparison of effect sizes. (Min-Max rescaling was used rather than Z-score standardization to allow for comparison of effect sizes with interaction effects, which do not permit Z-scores).
+
+### Statistical Simulation
+
+Finally, to visualize our results, we applied statistical simulation in the Zelig package in R. This technique creates precise simulated treatment effects with confidence intervals, based on 1000 simulations drawn from a multivariate normal distribution to account for estimation and fundamental uncertainty (King et al. 2000; Choirat et al. 2017). All simulations were performed using our fully specified DiD model (Model 4, **Table 2**). 
+
+To answer our first and second hypotheses, we simulated the change in expected social vulnerability for an average city with the minimum observed level of bonding, bridging, and linking social capital in 2000, compared to the expected social vulnerability of that city in 2017 given the maximum observed level of bonding social capital. To account for confounding factors, all other types of social capital were held at their minimum, while all other covariates were held at their mean or modes. Next, to answer our second hypothesis, we repeat this process, but instead vary bridging social capital from its minimum to maximum observed levels, holding all else constant. Finally, to answer our third hypothesis, we varied linking social capital from its minimum to maximum observed levels, holding all else constant. We present these simulations in the Results in **Figure 1.**
+
+
+\newpage
+\blandscape
+```{r fig1, echo = FALSE, out.width="100%", dpi=500,  fig.cap="Figure 1: Simulated Treatment Effects of Social Capital on Vulnerability (Model 4)"}
+knitr::include_graphics("/cloud/project/viz/did_fd.png", dpi = 500)
+```
+\elandscape
+\newpage
+
+
+Results
+==========
+
+## Hypothesis 1: Does Bonding Social Capital Decrease Vulnerability?
+	
+First, we hypothesized that bonding social capital decreases vulnerability, and we find strong evidence to support this hypothesis. Our difference-in-differences models found that with each passing year, cities where bonding social capital increased experienced lower levels of vulnerability (beta = -0.003, p < 0.001, Model 4). This effect was consistent with and without controls (Models 1-4). Our simulations in **Figure 1** project that an average city with the minimum observed level of bonding social capital (1) in 2000 experienced an expected vulnerability score of 6.86 on a scale from 1-10. But holding all else equal, an increase in bonding social capital from minimum (1) in 2000 to maximum levels (10) in 2017 would lead to an expected decrease in social vulnerability by -0.26 points down to 6.59. Our fixed effects models (5-8) showed similar outcomes. We found this when controlling for each type of social capital, annual fixed effects, and alternative explanations.
+
+## Hypothesis 2: Does Bridging Social Capital Decrease Vulnerability?
+
+Second, we hypothesized that bridging social capital led to decreases in social vulnerability as well, but this was not the case. Our difference-in-differences models found a weak positive effect of bridging social capital for each passing year (beta < 0.001, p > 0.10). However, when we simulated the change in expected vulnerability, our model projected a moderate increase in social vulnerability of 0.88 (p < 0.001) if a city with weak social capital (1) in 2000 developed strong bridging ties (10) by 2017, holding all else constant. 
+
+Our fixed effects models find similarly statistically significant evidence of a positive effect (beta = 0.023, p < 0.001). The positive relationship between bridging capital and vulnerability increases dramatically once controls are introduced, then decreases notably (but remains positive) as more controls are added to the model. This suggests that regional and disaster-related factors influence this relationship, but it still remains. This indicates that our hypothesis was incorrect and that bridging ties on their own do not necessarily reduce vulnerability, but instead are associated with greater vulnerability.
+
+We expect that bonding social capital decreased vulnerability while bridging increased vulnerability because these strong bonding ties were more effective at delivering the aid that residents in vulnerable communities need; it is not always realistic to assume that weak bridging ties between members of different social groups with fill gaps in housing, food, or shelter as well as bonding social ties do.
+
+## Hypothesis 3: Does Linking Social Capital Decrease Vulnerability?
+
+Third, we hypothesized that linking social capital would limit vulnerability, but this was also not so. Our difference-in-differences models found a weak boosting effect (beta = 0.001, p < 0.001) given an increase in linking ties each year. Our simulations found the same, projecting a median expected increase of 0.66 points (p < 0.001) in vulnerability from 1 to 10 for city with weak social ties (1) in 2000 whose linking social capital increased to maximum levels (10) by 2017. This contrasts with our hypothesis, indicating that strong linking ties alone will not help residents reduce vulnerability in their area.
+
+## Controls and Validation
+
+Several additional findings indicate added support for our models. First, in every model included in the difference in differences and fixed effect models, even as more controls are added, the effects of the social capital variables on vulnerability remain statistically significant and the direction of the effect remains consistent.
+
+Second, we saw several other expected associations between vulnerability and alternative explanations, including governance capacity and city spending. We found a negative relationship between vulnerability and each kind of city spending, the strongest of which was with disaster relief spending. In contrast, we saw a consistent positive relationship with vulnerability. This matches with what we would expect; governance capacity and budget alone does not reduce social vulnerability, but city spending in key priorities could. Coupled with the notable negative relationships between per-capita disaster spending and vulnerability, this suggests that the allocation of money toward disaster spending, not the amount of money that a town has overall, decreases community vulnerability. In contrast, disaster conditions were linked to greater vulnerability, which matches with expectations.	
+
+Third, the effects of our independent variable variables over time actually closely match descriptive evidence as well. In Figure 2, we plotted the changing correlation between vulnerability and each type of social capital in municipalities for each of 47 prefectures in Japan (y-axis) over time (x-axis). This allows us to account for both geography and time. We see that over time, the association between bonding social capital and vulnerability declined but remained weakly positive, while the associations between bridging and linking social capital remained consistent and weak-to-moderately negative.
+
+\newpage
+\blandscape
+
+```{r fig2, echo = FALSE, out.width="100%", fig.cap="Figure 2: Changing Correlations between Social Capital and Vulnerability Over Time"}
+knitr::include_graphics("/cloud/project/viz/fig2_correlation.png", dpi = 500)
+```
+
+\elandscape
+\newpage
+
+
+Discussion
+==========
+
+#### Findings in brief:
+
+We hypothesized three relationships between social capital and vulnerability. First, we believed that (**H1**) stronger bonding ties would weaken social vulnerability, and that hypothesis is supported by our research. Second, we believed that (**H2**) stronger bridging ties would weaken social vulnerability as well, but our research suggests that stronger bridging ties actually increase social vulnerability. Lastly, we hypothesized that (**H3**) stronger linking ties would lessen social vulnerability. However, our data shows a slight positive relationship between linking ties and social vulnerability, suggesting that stronger linking ties increase vulnerability. 
+
+#### Value Added:
+
+This study is among the first to examine the relationship between social capital and social vulnerability, especially at a nationwide scale. By examining the effects of various forms of social relationships on vulnerability, we can see how interpersonal factors contribute to the overall resilience of communities. The potential applications for this kind of analysis are significant. Lawmakers can use this research to create policies which strengthen and utilize these connections to create stronger and more resilient communities. Researchers can further analyze these connections to better understand their relationships with one another and make more informed suggestions on how communities can be strengthened through social connections.
+
+The data confirmed our first hypothesis (**H1**), that increased bonding ties would decrease vulnerability, but simultaneously contradicted our second hypothesis (**H2**), which suggested that increased bridging ties would likewise decrease vulnerability. This suggests that in crisis situations, such as in the event of natural disasters, reliance on relationships made from bonding ties lessens vulnerability more than reliance on relationships made from bridging ties. This could be due to a greater understanding among those with bonding ties of each other’s needs, since they belong to the same in-groups. 
+
+Societal norms also often prioritize bonding relationships, incentivizing people to rely on those relationships or prioritize those with whom they have these sorts of relationships. The effects of this are potentially exacerbated by our use of Japan as the case for this study; strong family and in-group ties are common in Japan [@koyano_2008], and have been linked to positive health outcomes among vulnerable individuals in the past [@aida_et_al_2017; @aldrich_and_kiyota_2017; @hikichi_et_al_2020]. Even so, the effects of bonding, in-group social ties exceeded expectations. This may contribute to the notable negative relationship between bonding social ties and social vulnerability.
+
+Our data also shows a strong positive relationship between the financial strength and social vulnerability, while simultaneously showing strong negative relationships between per-capita spending on disaster management and social vulnerability. This is an especially important finding for policy creation purposes, since it suggests that it is increased per-capita expenditures on disaster management, not increased government capacity (financial strength), that reduces social vulnerability. That is, the amount of money spent per-person on disaster management is far more important and effective than the amount of money that a city has overall. Read positively, this suggests that, richer or poorer, any city can better protect its citizens by investing in disaster management. 
+
+#### Limitations:
+
+This study comes with several limitations. First, we extrapolated results from years of Japanese census data, therefore making our quasi-experiments 'observational.' Considering this less-controlled environment, we relied upon statistical controls to adjust for population, governance capacity, policy tool choice, disaster damage, migration impacts on social cohesion, temporal variation, and regional differences. 
+
+Second, we did not control for socioeconomic status, gender, or other vulnerability-related measures to avoid endogeneity bias, because these indicators are already integrated into the outcome variable itself. 
+
+Third, our final models do not include measures for social assistance since they were already included in our vulnerability measures. Though this was done to prevent collinearity, it also meant that we could not investigate the relationship between social assistance and vulnerability through our final models. (Still, our findings persisted even when we controlled for spending on social assistance.) This is an exciting area for future research, and we encourage future scholars to examine relationships between social welfare support and each aspect of vulnerability independently.
+
+Fourth, this study examined a single country, Japan, and this raises questions about in what contexts these results are generalizable. Given that Japan's 1741 municipalities are highly susceptible to typhoons, earthquakes, and tsunami most of every year, the authors hope that our findings on the correlates of vulnerability present value added, even in isolation. Fortunately, however, Japan is not a unique case, but rather the 3rd largest economy in the world, and a major industrialized democracy. We anticipate that friendship, family, and ties to colleagues and acquaintances also play close roles in supporting and alleviating vulnerability in other industrialized democracies like the US, Germany, Taiwan, South Korea, and many other states. We encourage future comparative research, such as efforts using the Global Social Survey, to investigate these questions.
+
+#### Policy Implications
+
+Finally, this research comes with several implications for policymakers. 
+
+- This study's findings suggest cities may benefit from leveraging existing bonding social ties to reduce social vulnerability in cities, drawing from an array of inexpensive programs and policy tools to promote bonding ties, by bringing families, friends, and neighbors together. 
+
+- Since these people may already share traits in common, events which create ties among these people can be advertised as designated spaces for these people to congregate, share their experiences, and make friends. Examples of such events include cultural group meetings, social events for senior citizens, and religious holiday celebrations. These events seek to reinforce trust and mutual support among these social circles.
+
+- Such groups need *places to gather and invest their time, frequently.* This echoes recent calls for greater investment in cities' 'social infrastructure', referring to the community centers, places of worship, social businesses, and parks that bring people together to form social ties [@klinenberg_2018; @fraser_et_al_2021_GEC]. 
+
+- Examples of institutional methods for strengthening in-group ties include weekly religious services organized by places of worship, community classes organized by schools, and activities for elders and family members organized by community centers or retirement homes [@aldrich_and_kiyota_2017].
+
+#### Directions for Further Research
+
+Social capital and social vulnerability have great potential applications in development studies [@woolcock_and_narayan_2000]; past studies conceptualized social capital-related concepts as “open” and “limited access” orders [@north_et_al_2009], describing how effectively citizens and leverage their relationships with authorities to access to political and economic support; others described the same concept as local officials' degree of "embeddedness" in community organizations [@tsai_2007]. Both concepts are near equivalents of linking capital. There is ripe opportunity for testing how other types of social relationships affect state development.
+
+Though our study finds a consistent negative effect of bonding capital on vulnerability, the jury remains out on the effects of other types of social capital on social vulnerability; the literature strongly suggests that bridging ties benefit vulnerable groups during and after crisis [@elliott_et_al_2010; @cox_et_al_2011; @aldrich_and_sawada_2015; @fraser_et_al_2021_NH]; although weak bridging ties might not be enough to change the financial security of a household, we suspect that simultaneous investments in bonding and bridging ties might be beneficial in communities. We encourage future studies, field experiments, and more to investigate these important questions.
+
+Further, though we found that bonding social capital was linked to ***lower*** social vulnerability, literature suggests that this is only true to an extent. In-group ties can also form, regrettably, among extremist and supremacist groups. We would expect that strong bonding ties within these groups are detrimental to social vulnerability in the short and long term, since such groups may become motivated to discriminate or commit acts of violence against those outside of their group [@aldrich_and_crook_2008; @aldrich_et_al_2018; @alcorta_et_al_2020]. Further research could be done to discover the threshold at which bonding social capital becomes detrimental, rather than beneficial, to the goal of decreasing social vulnerability. 
+
+By examining the nuances of bonding in-group social ties in vulnerability, we hope this research will lead to renewed investigations of the potentials for social capital-based interventions to reduce vulnerability and improve cities' sustainable development overall.
+
+References {#references .unnumbered}
+==========
+
+<div id="refs"></div>
+
+Appendix {-} 
+==========
+
+\newpage
+\blandscape
+
+```{r tablea1, message=FALSE, warning = FALSE,  echo = FALSE, out.width="100%"}
+library(tidyverse)
+library(texreg)
+library(knitr)
+library(kableExtra)
+
+# Many thanks to the beautiful latex solution on StackOverflow
+# describing how to add landscape tables
+# https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf
+
+mymodels <- read_rds("/cloud/project/fe_models.rds")
+
+table1_short <- texreg::matrixreg(
+  l = mymodels,
+  omit.coef = "year|region",
+  custom.model.names = c("5. Basic",
+                         "6. Controls",
+                         "7. Extended",
+                         "8. With Regions"), 
+  stars = c(0.001, 0.01, 0.05, 0.10),
+  include.fstat = TRUE,
+  custom.gof.rows = list(
+   "Max VIF" = mymodels %>%
+      map(~car::vif(.)[,3]^2 %>% max()) %>%
+      unlist(),
+    "LR Test (p-value)" = lmtest::lrtest(mymodels[[1]], mymodels[[2]],
+                                         mymodels[[3]], mymodels[[4]]) %>%
+      as.data.frame() %>%
+      mutate(value = paste(round(LogLik,1), gtools::stars.pval(`Pr(>Chisq)`), sep = "")) %>%
+      select(value) %>%
+      unlist()
+  ), digits = 3,
+  custom.gof.names = c("R2", NA, NA),
+  single.row = TRUE, bold = 0.10, 
+  custom.header = list("Outcome: Social Vulnerability - Beta Coefficient (Standard Error)" = 1:4),
+  caption.above = TRUE,
+  include.adjr = FALSE,
+  #groups = list("Treatment Effects" = 1:3),
+  custom.coef.map = list(
+    "bonding" = "Bonding SC",
+    "bridging" = "Bridging SC",
+    "linking" = "Linking SC",
+    "pop" = "Population",
+    "financial_strength_index" = "Financial Strength",
+    "exp_dis_relief_per_capita" = "Disaster Relief Exp.",
+    "exp_fire_per_capita" = "Emergency Services Exp.",
+    "exp_public_works_per_capita" = "Public Works Exp.",
+    "disaster" = "Disaster Conditions",
+    "total_migration" = "Total Migration Rate",
+    "(Intercept)" = "Constant"),  
+  center = TRUE,
+    groups = list(
+    "Direct Effects" = 1:3,
+    "Controls" = 4:11)
+)
+
+#  caption = "
+#  custom.note = NULL,
+
+
+table1_short[-1,] %>%
+  as_tibble() %>%
+  magrittr::set_colnames(value = table1_short[1,]) %>%
+  kable(
+    caption = "Table A1: OLS Fixed Effects Models (Validation Models). Modeling Social Vulnerability in 1730 Japanese Municipalities over 18 years from 2000-2017 (n = 31,243) with annual fixed effects.",
+    label = NA,
+    booktabs=TRUE) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "left",
+    latex_options = c("striped")
+    ) %>%
+  row_spec(row = c(1, 5, 9), bold=TRUE) %>%
+  row_spec(17, hline_after = TRUE) %>%
+  footnote(
+    threeparttable = TRUE,
+    alphabet = c(
+      "Statistical Significance: *** p < 0.001, ** p < 0.01, * p < 0.05, . p < 0.10.",
+      "LR Test: Likelihood Ratio tests show how much new model improved log-likelihood, versus previous model. Statistically significant increase in log-likelihood means better model. Tests show model 4 fits best.",
+      "Effects: Beta coefficients indicate the projected increase in city's vulnerability index (1-10) given 1-unit increase in predictor on a scale from 1 (min) to 10 (max). All predictors rescaled from 1 to 10 for easy comparison of effect sizes. Treatment effects show projected increase in vulnerability given a 1-unit increase in predictor as time increases from by 1. Time measured from 1-18 (1 = 2000, 2 = 2001, etc.)",
+      "Exp. refers to spending, normalized by population. Variance Inflation Factors all below 10, showing no collinearity problems.")
+    )
+```
+
+\elandscape
+\newpage
+
+
+\blandscape
+
+```{r figa1, echo = FALSE, out.width="100%", dpi=500, fig.cap="Figure A1: Simulated Effects in Fixed Effects Models (Validation Model 8)"}
+knitr::include_graphics("/cloud/project/viz/fixed_effect_ev.png", dpi = 500)
+```
+\elandscape

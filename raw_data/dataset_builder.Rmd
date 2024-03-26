@@ -1,0 +1,234 @@
+---
+title: "Build Dataset"
+author: "Timothy Fraser"
+date: "July 12, 2021"
+output: html_notebook
+---
+
+# 0. Packages
+
+```{r, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(readr)
+```
+
+# 1. Census Data
+
+Let's import raw census data, compile it, and export it.
+
+```{r,  warning = FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+bind_rows(
+  
+  # Import a select few variables from this dataset
+  read_csv("estat_data_part_a.csv", skip = 8) %>%
+    mutate_all(funs(as.double(str_remove_all(., "[,]")))),
+  
+  read_csv("estat_data_part_a2.csv", skip = 8) %>%
+    mutate_all(funs(as.double(str_remove_all(., "[,]"))))
+  ) %>%
+  # Recode area code
+  mutate(muni_code = `AREA Code` %>% str_pad(5, "left", "0")) %>%
+
+  # Join in other data
+  left_join(by = c("muni_code", "YEAR"),
+            y = bind_rows(
+              
+              read_csv("estat_data_part_b.csv", skip = 8) %>%
+                mutate_all(funs(as.double(str_remove_all(., "[,]")))),
+              
+              read_csv("estat_data_part_b2.csv", skip = 8) %>%
+                mutate_all(funs(as.double(str_remove_all(., "[,]"))))
+              ) %>%
+              # Recode area code
+              mutate(muni_code = `AREA Code` %>% str_pad(5, "left", "0"))
+            ) %>%
+  # Select and rename data
+  select(muni_code,
+         year = YEAR,
+         pop = "A1101_Total population (Both sexes)[person]",
+         exp_fire = "D320309_(Expenditure) Fire service (local public finance, municipalities)[thousand yen]",
+         exp_dis_relief = "D320311_Disaster relief expenditure (municipalities)[thousand yen]",
+         kindergartens =  "E1101_Number of kindergartens[number of kindergartens]",
+         elementary = "E2101_Number of elementary schools[number of schools]",
+         secondary = "E3101_Number of lower secondary schools[number of schools]",
+         upper_secondary = "E4101_Number of upper secondary schools[number of schools]",
+         public_halls = "G1201_No. of public halls[number of community centers]",
+         libraries = "G1401_No. of libraries[number of community centers]",
+         owned_homes = "H1310_No. of owned houses[dwellings]",
+         rented_homes = "H1320_No. of rented houses[dwellings]",
+         public_rented_homes = "H1321_No. of rented houses owned by local government, urban renaissance agency or public corporation[dwellings]",
+         rented_homes_public_govt = "H132101_No. of rented houses owned by local government[dwellings]",
+         rented_homes_public_not_govt = "H132102_No. of rented houses owned by urban renaissance agency or public corporation[dwellings]",
+         rented_homes_private = "H1322_No. of rented houses owned privately[dwellings]",
+         owned_homes_earthquake_resist_built = "H2270_No. of dwellings getting earthquake resistance construction (Owned)[dwellings]",                                                                   
+         owned_homes_earthquake_resist_renov = "H227004_Total No. of owned houses renovated to make it earthquake-resistant in and after 2009[dwellings]",
+         # Population density
+         pop_density = "#A01202_Population per 1 km2 of inhabitable area[person]",
+         income_thous = "C120110_Taxable income[thousand yen]",
+         employee_secondary = "C2204_Number of persons engaged (secondary industry) (Establishments and Enterprise Census)[person]",
+         employee_tertiary = "C2205_Number of persons engaged (tertiary industry) (Establishments and Enterprise Census)[person]",
+         unemployment = "#F01301_Unemployment rate (both sexes)[%]",
+         inmigrants = "A5101_Number of in-migrants from other municipalities[person]",
+         outmigrants = "A5102_Number of out-migrants to other municipalities[person]",
+         pop_over_age_65 = "A1303_Total population (65 and over)[person]",
+         pop_women = "A110102_Total population (Female)[person]",
+         land_price_residential = "C5401_Average price for land transaction (Residential quarter)[yen/m2]",
+         exp_social_assistance = "D320404_(Expenditure) Social assistance (local public finance, municipalities)[thousand yen]") %>%
+  
+  # Join in a few additional variables
+  left_join(
+     # Join using municipality code and year
+    by = c("muni_code", "year"),
+    y = read_csv("more_stats.csv") %>%
+      # repair 5-digit municipality code
+      mutate(muni_code = muni_code %>% str_pad(5,"left","0")) %>%
+      # select main variables
+      select(year, muni_code,
+             financial_strength_index = financial_strength_index_2016,
+             rev_to_exp_ratio = rev_to_exp_ratio_2016,
+             exp_public_works = exp_public_works_thous_2016) %>%
+      # Convert to numeric
+      mutate_at(vars(financial_strength_index, rev_to_exp_ratio), 
+                funs(as.numeric)) %>%
+      mutate(exp_public_works = exp_public_works %>% str_remove_all("[,]") %>% parse_number()) 
+    ) %>%
+  
+  
+  
+  # Pivot to long form
+  pivot_longer(cols = -c(muni_code, year),
+               names_to = "measure",
+               values_to = "value") %>%
+  
+  # Remove urban wards outside of Tokyo from data
+  filter(muni_code %in% read_csv("muni_code.csv")$muni_code) %>%
+  
+  # Export to file
+  write_csv("dataset_processing.csv")
+
+```
+
+
+Next, we identify which of the variables we collected are missing less than 5% of data points in any year after 2010. Those which meet our criteria are eligible variables we can use for our analysis.
+
+```{r,  warning = FALSE, message = FALSE, warning = FALSE}
+# Identify variables missing less than 5% of data for a year
+read_csv("dataset_processing.csv") %>%
+  group_by(measure, year) %>%
+  # Count missing data, divided by total
+  summarize(
+    missing = sum(
+      if_else(is.na(value), 1, 0)) / n()) %>%
+  # Filter to just those missing less than 5%
+  # and those pertaining to years during or after 2000
+  filter(missing < 0.05 & year >= 2000) %>% ungroup %>%
+  # Create variable name with year
+  mutate(measure = paste(measure, year, sep = "_")) %>%
+  select(measure)
+```
+
+
+Next, we want to create a smaller dataset of our eligible variables, merging our variables from the social capital index into the list of 1741 municipalities.
+
+```{r,  warning = FALSE, message = FALSE, warning = FALSE}
+
+# Import new social capital indices
+index <- read_csv("indices_V2_2020_10_28.csv") %>%
+  select(muni_code, year, social_capital, bonding, bridging, linking, vulnerability)
+
+# Now bind everything together
+read_csv("muni_code.csv") %>% 
+  # Extract prefecture names and codes
+    mutate(pref = word(muni_en, 1),
+         pref_code = str_sub(muni_code, 1,2)) %>%
+  left_join(by = "muni_code",
+            # Import in valid variables
+            y = read_csv("dataset_processing.csv") %>%
+              pivot_wider(id_cols = c(muni_code, year),
+                          names_from = measure,
+                          values_from = value) %>%
+              # Get most recent variables that were valid
+              select(year, muni_code, pop,
+                     kindergartens, elementary, 
+                     secondary, upper_secondary,
+                     public_halls, libraries, 
+                     exp_fire, exp_dis_relief,
+                     exp_public_works, # rename
+                     exp_social_assistance,
+                     financial_strength_index,
+                     rev_to_exp_ratio,
+                     
+                     pop_over_age_65,
+                     pop_women,
+                     unemployment,
+                     pop_density,
+                     inmigrants,
+                     outmigrants,
+                     income_thous)) %>%
+  # Arrange
+  arrange(muni_code, desc(year)) %>%
+  # Fill in missing cases where able using previous values or most recent values
+  group_by(muni_code) %>%
+  fill(pop:income_thous, .direction = "downup") %>%
+  # Now for each row, calculate the following:
+              rowwise() %>%
+              mutate(
+                # count total number of potential public shelters per thousand persons
+                shelters_per_capita = sum(
+                  kindergartens, elementary, secondary, 
+                  upper_secondary, public_halls, libraries) / pop * 1000,
+                # Get spending on emergencies, disasters, and public works per capita (in thousands of yen)
+                exp_fire_per_capita = exp_fire / pop,
+                exp_dis_relief_per_capita = exp_dis_relief / pop,
+                exp_public_works_per_capita = exp_public_works / pop,
+                exp_social_assistance_per_capita = exp_social_assistance / pop,
+                income_thous_per_capita = income_thous / pop,
+                
+                pop_women = pop_women / pop * 100,
+                pop_over_age_65 = pop_over_age_65 / pop * 100,
+                total_migration = (inmigrants + outmigrants) / pop * 1000,
+                net_migration = (inmigrants - outmigrants) / pop * 1000) %>%
+  
+  # We have created three more of our main control variables:
+  # emergency services spending (proxy: expenditure of fire departments)
+  # shelters per capita (proxy: schools and community centers)
+  # population
+  # Join in disaster data
+  left_join(by = "muni_code",
+            y = readxl::read_excel("Database_prefectural_analysis_R.xlsx") %>% 
+              select(muni_code = Code, death11, destroy11, damaged11, coast)  %>%
+              # Creat fukushima exclusion zone
+              mutate(fukushima = if_else(muni_code %in% c("07211", # tamura-shi
+                                                          "07212", # minamisoma-shi
+                                                          "07546", # futaba
+                                                          "07564", # iitate
+                                                          "07548", # katsurao
+                                                          "07308", # kawamata
+                                                          "07544", # kawauchi
+                                                          "07545", # okuma
+                                                          "07547", # namie
+                                                          "07542", # naraha
+                                                          "07543"), # tomioka
+                                         true = 1, false = 0))) %>%
+  mutate(damage_rate = (destroy11 + damaged11) / pop * 1000,
+         death_rate = death11 / pop * 1000) %>%
+  mutate_at(vars(death_rate, damage_rate), funs(if_else(is.na(.), 0, false = .))) %>%
+  mutate_at(vars(death11, destroy11, damaged11, coast,
+                 fukushima, death_rate, damage_rate),
+            funs(if_else(year <= 2010, true = 0, false = .))) %>%
+  
+  # Join in vulnerability and social capital data
+  left_join(
+    by = c("year", "muni_code"),
+    y = index) %>%
+  # Fix any infinites (created by dividing by population in a town with zero residents; this should be classified as missing)
+    mutate_at(vars(pop:vulnerability),
+            funs(if_else(is.infinite(.) | is.nan(.), true = NA_real_, false = .))) %>%
+  # Export these to file
+  arrange(muni_code, desc(year)) %>%
+  filter(year %in% c(2000:2017)) %>%
+  write_csv("dataset.csv")
+  
+```
+

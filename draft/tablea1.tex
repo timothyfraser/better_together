@@ -1,0 +1,40 @@
+\begin{table}
+
+\caption{Figure A1: OLS Fixed Effects Models (Validation Models). Modeling Social Vulnerability in 1730 Japanese Municipalities over 18 years from 2000-2017 (n = 31,243) with annual fixed effects.}
+\begin{threeparttable}
+\begin{tabular}[t]{lllll}
+\toprule
+ & 5. Basic & 6. Controls & 7. Extended & 8. With Regions\\
+\midrule
+\textbf{\cellcolor{gray!6}{Direct Effects}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}}\\
+Bonding SC & -0.003 (0.002) & -0.078 (0.002) *** & -0.069 (0.002) *** & -0.071 (0.002) ***\\
+\cellcolor{gray!6}{Bridging SC} & \cellcolor{gray!6}{0.009 (0.001) ***} & \cellcolor{gray!6}{0.043 (0.001) ***} & \cellcolor{gray!6}{0.032 (0.001) ***} & \cellcolor{gray!6}{0.023 (0.001) ***}\\
+Linking SC & -0.024 (0.002) *** & -0.023 (0.002) *** & -0.014 (0.002) *** & -0.009 (0.002) ***\\
+\textbf{\cellcolor{gray!6}{Controls}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{}}\\
+\addlinespace
+Population & 0.121 (0.005) *** & -0.005 (0.005) & 0.006 (0.005) & 0.010 (0.005) .\\
+\cellcolor{gray!6}{Financial Strength} & \cellcolor{gray!6}{} & \cellcolor{gray!6}{0.084 (0.002) ***} & \cellcolor{gray!6}{0.090 (0.002) ***} & \cellcolor{gray!6}{0.089 (0.003) ***}\\
+Disaster Relief Exp. &  & -0.391 (0.018) *** & -0.336 (0.018) *** & -0.322 (0.018) ***\\
+\textbf{\cellcolor{gray!6}{Emergency Services Exp.}} & \textbf{\cellcolor{gray!6}{}} & \textbf{\cellcolor{gray!6}{-0.040 (0.001) ***}} & \textbf{\cellcolor{gray!6}{-0.044 (0.001) ***}} & \textbf{\cellcolor{gray!6}{-0.043 (0.001) ***}}\\
+Public Works Exp. &  & -0.022 (0.001) *** & -0.012 (0.001) *** & -0.016 (0.001) ***\\
+\addlinespace
+\cellcolor{gray!6}{Disaster Conditions} & \cellcolor{gray!6}{} & \cellcolor{gray!6}{} & \cellcolor{gray!6}{0.038 (0.008) ***} & \cellcolor{gray!6}{0.047 (0.008) ***}\\
+Total Migration Rate &  &  & -0.170 (0.004) *** & -0.169 (0.004) ***\\
+\cellcolor{gray!6}{Constant} & \cellcolor{gray!6}{6.403 (0.026) ***} & \cellcolor{gray!6}{7.405 (0.032) ***} & \cellcolor{gray!6}{7.587 (0.032) ***} & \cellcolor{gray!6}{7.713 (0.032) ***}\\
+Max VIF & 1.544 & 2.080 & 2.094 & 2.593\\
+\cellcolor{gray!6}{LR Test (p-value)} & \cellcolor{gray!6}{-17353.1} & \cellcolor{gray!6}{-13658.6***} & \cellcolor{gray!6}{-12654.5***} & \cellcolor{gray!6}{-12349.4***}\\
+\addlinespace
+R2 & 0.140 & 0.321 & 0.363 & 0.376\\
+\cellcolor{gray!6}{Num. obs.} & \cellcolor{gray!6}{31243} & \cellcolor{gray!6}{31243} & \cellcolor{gray!6}{31243} & \cellcolor{gray!6}{31243}\\
+\midrule
+F statistic & 241.524 & 590.141 & 659.410 & 536.175\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item[a] Statistical Significance: *** p < 0.001, ** p < 0.01, * p < 0.05, . p < 0.10.
+\item[b] LR Test: Likelihood Ratio tests show how much new model improved log-likelihood, versus previous model. Statistically significant increase in log-likelihood means better model. Tests show model 4 fits best.
+\item[c] Effects: Beta coefficients indicate the projected increase in city's vulnerability index (1-10) given 1-unit increase in predictor on a scale from 1 (min) to 10 (max). All predictors rescaled from 1 to 10 for easy comparison of effect sizes. Treatment effects show projected increase in vulnerability given a 1-unit increase in predictor as time increases from by 1. Time measured from 1-18 (1 = 2000, 2 = 2001, etc.)
+\item[d] Exp. refers to spending, normalized by population. Variance Inflation Factors all below 10, showing no collinearity problems.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
